@@ -149,3 +149,33 @@ CREATE OR REPLACE VIEW stview AS
 SELECT id, surname, name FROM student
 ORDER BY score DESC;
 --22
+SELECT st.n_group / 1000 AS course, hb.name
+FROM student_hobby AS sb
+LEFT JOIN student AS st ON st.id = sb.student_id
+LEFT JOIN hobby AS hb ON hb.id = sb.hobby_id
+
+WHERE hb.name = (
+	SELECT hb.name
+	FROM student_hobby AS sb
+	LEFT JOIN student AS st ON st.id = sb.student_id
+	LEFT JOIN hobby AS hb ON hb.id = sb.hobby_id
+	GROUP BY hb.name
+	ORDER BY COUNT(1)
+	DESC LIMIT 1
+)
+GROUP BY st.n_group / 1000, hb.name;
+
+SELECT st.n_group, hb.name, COUNT(hb.name)
+FROM student_hobby AS sb
+LEFT JOIN student AS st ON st.id = sb.student_id
+LEFT JOIN hobby AS hb ON hb.id = sb.hobby_id
+GROUP BY st.n_group, hb.name
+ORDER BY COUNT(hb.name) DESC;
+--23
+CREATE OR REPLACE VIEW maxriskhb AS
+SELECT hb.name
+FROM student_hobby AS sb
+LEFT JOIN student AS st ON st.id = sb.student_id
+LEFT JOIN hobby AS hb ON hb.id = sb.hobby_id
+WHERE n_group / 1000 = 2
+ORDER BY hb.risk DESC LIMIT 1;
