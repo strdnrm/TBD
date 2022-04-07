@@ -75,13 +75,13 @@ AND st.n_group / 1000 = 2;
 SELECT st.n_group / 1000 AS course, COUNT(DISTINCT sh.hobby_id)
 FROM student AS st
 LEFT JOIN student_hobby AS sh ON sh.student_id = st.id
-GROUP BY st.n_group / 1000
+GROUP BY st.n_group / 1000;
 --13
 SELECT st.id, st.surname, st.name, st.age, st.n_group / 1000 AS course
 FROM student AS st
 LEFT JOIN student_hobby AS sh ON sh.student_id = st.id
 WHERE sh.id IS NULL AND st.score >= 4.5
-ORDER BY st.n_group / 1000, st.age DESC
+ORDER BY st.n_group / 1000, st.age DESC;
 --14
 CREATE VIEW students AS
 SELECT st.id, st.name, st.surname, st.n_group, NOW() - sh.started_at AS duration
@@ -89,12 +89,12 @@ FROM student AS st
 LEFT JOIN student_hobby AS sh ON sh.student_id = st.id
 WHERE sh.id IS NOT NULL
 AND sh.finished_at IS NULL
-AND extract(year from age(now(), sh.started_at)) > 5
+AND extract(year from age(now(), sh.started_at)) > 5;
 --15
 SELECT hb.name, COUNT(sh.student_id)
 FROM hobby AS hb
 LEFT JOIN student_hobby AS sh ON sh.hobby_id = hb.id
-GROUP BY hb.name
+GROUP BY hb.name;
 --16
 SELECT hb.id 
 FROM hobby AS hb
@@ -112,7 +112,7 @@ WHERE sh.hobby_id IN
 	LEFT JOIN student_hobby AS sh ON sh.hobby_id = hb.id
 	GROUP BY hb.id
 	ORDER BY COUNT(sh.student_id) DESC LIMIT 1
-)
+);
 --18
 SELECT id
 FROM hobby
@@ -149,3 +149,90 @@ CREATE OR REPLACE VIEW stview AS
 SELECT id, surname, name FROM student
 ORDER BY score DESC;
 --22
+
+--23
+
+--24
+
+--25
+SELECT hb.name, COUNT(*) FROM student st
+LEFT JOIN student_hobby sh ON st.id = sh.student_id
+LEFT JOIN hobby hb ON hb.id = sh.hobby_id
+WHERE hb.name IS NOT NULL
+GROUP BY hb.name
+ORDER BY COUNT(*)
+DESC 
+LIMIT 1;
+--26
+CREATE OR REPLACE VIEW updateveiw AS
+SELECT * FROM student st
+WITH CHECK OPTION;
+--27
+SELECT LEFT(st.name, 1), MAX(st.score), AVG(st.score), MIN(st.score)
+FROM student st
+GROUP BY LEFT(st.name, 1)
+HAVING MAX(st.score) > 3.6
+--28
+SELECT st.n_group / 1000 AS course, st.surname,  MAX(st.score), MIN(score)
+FROM student st
+GROUP BY st.n_group / 1000, st.surname
+--29
+SELECT EXTRACT(YEAR FROM date_birth), COUNT(*)
+FROM student st
+LEFT JOIN student_hobby sh ON sh.student_id = st.id
+WHERE sh.hobby_id IS NOT NULL
+GROUP BY EXTRACT(YEAR FROM date_birth);
+--30
+SELECT regexp_split_to_table(st.name,''), MIN(hb.risk), MAX(hb.risk)
+FROM student st
+RIGHT JOIN student_hobby sh ON sh.student_id = st.id
+LEFT JOIN hobby hb ON hb.id = sh.hobby_id
+GROUP BY regexp_split_to_table(st.name,'');
+--31
+SELECT EXTRACT(MONTH FROM st.date_birth), AVG(st.score)
+FROM student st
+RIGHT JOIN student_hobby sh ON sh.student_id = st.id
+LEFT JOIN hobby hb ON sh.hobby_id = hb.id
+WHERE hb.name LIKE 'Футбол'
+GROUP BY EXTRACT(MONTH FROM st.date_birth);
+--32
+SELECT st.name Имя, st.surname Фамилия, st.n_group Группа
+FROM student st
+RIGHT JOIN student_hobby sh ON sh.student_id = st.id
+LEFT JOIN hobby hb ON sh.hobby_id = hb.id
+GROUP BY st.id;
+--33
+SELECT 
+CASE
+	WHEN strpos(st.surname, 'ов') != 0 THEN strpos(st.surname, 'ов')::VARCHAR(255)
+	ELSE 'Не найдено'
+END
+FROM student st;
+--34
+SELECT rpad(st.surname, 10, '#')
+FROM student st;
+--35
+SELECT replace(st.surname, '#', '')
+FROM student st;
+--36
+SELECT  
+DATE_PART('days', DATE_TRUNC('month', '2018-04-01'::DATE) 
+	+ '1 MONTH'::INTERVAL 
+	- '1 DAY'::INTERVAL
+);
+--37
+SELECT date_trunc('week', current_date)::date + 5;
+--38
+SELECT 
+EXTRACT(CENTURY FROM current_date),
+EXTRACT(WEEK FROM current_date),
+EXTRACT(DOY FROM current_date);
+--39
+SELECT st.name, st.surname, hb.name,
+CASE
+	WHEN sh.finished_at IS NULL THEN 'Занимается'
+	ELSE 'Закончил'
+END Занятость 
+FROM student st
+RIGHT JOIN student_hobby sh ON sh.student_id = st.id
+LEFT JOIN hobby hb ON hb.id = sh.hobby_id;
