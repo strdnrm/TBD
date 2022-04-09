@@ -68,9 +68,30 @@ JOIN student AS st ON st.id = sh.student_id
 WHERE st.score BETWEEN 2.5 AND 3.5
 AND st.n_group / 1000 = 2;
 --10
- 
+SELECT st.n_group / 1000 course
+FROM student st
+INNER JOIN 
+(
+	SELECT st.id, st.n_group / 1000 course, COUNT(*) cnt
+	FROM student st
+	RIGHT JOIN student_hobby sh ON sh.student_id = st.id
+	GROUP BY st.id, st.n_group
+	HAVING COUNT(*) > 1
+) tb ON st.n_group / 1000 = tb.course
+GROUP BY st.n_group / 1000, tb.cnt
+HAVING tb.cnt::real / COUNT(*)::real > 0.5;
 --11
-
+SELECT st.n_group, COUNT(*), tb.fourres
+FROM student st
+INNER JOIN
+(
+    SELECT n_group, COUNT(*) fourres
+    FROM student
+    WHERE SCORE >= 4
+    GROUP BY n_group
+) tb ON tb.n_group = st.n_group
+GROUP BY st.n_group, tb.fourres
+HAVING tb.fourres::real/COUNT(*)::real >= 0.6;
 --12
 SELECT st.n_group / 1000 AS course, COUNT(DISTINCT sh.hobby_id)
 FROM student AS st
@@ -151,9 +172,30 @@ ORDER BY score DESC;
 --22
 
 --23
-
+CREATE OR REPLACE VIEW vo AS
+SELECT hb.NAME, COUNT(*) popularity, hb.risk
+FROM student st
+RIGHT JOIN student_hobby sh ON sh.student_id = st.id
+LEFT JOIN hobby hb ON hb.id = sh.hobby_id
+WHERE st.n_group / 1000 = 2
+GROUP BY hb.NAME, hb.risk
+ORDER BY COUNT(*) DESC, hb.risk DESC
+LIMIT 1;
 --24
-
+CREATE OR REPLACE VIEW newvwv AS
+SELECT st.n_group / 1000 course, COUNT(*), 
+CASE
+    WHEN tb.Excellentst IS NULL THEN 0
+    ELSE tb.Excellentst
+END Excellentst 
+FROM student st
+LEFT JOIN (
+    SELECT st.n_group, COUNT(*) Excellentst
+    FROM student st
+    WHERE st.score >= 4.5
+    GROUP BY st.n_group
+) tb ON tb.n_group = st.n_group
+GROUP BY st.n_group / 1000, tb.Excellentst
 --25
 SELECT hb.name, COUNT(*) FROM student st
 LEFT JOIN student_hobby sh ON st.id = sh.student_id
