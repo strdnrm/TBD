@@ -170,7 +170,17 @@ CREATE OR REPLACE VIEW stview AS
 SELECT id, surname, name FROM student
 ORDER BY score DESC;
 --22
-
+SELECT q.course, q.hbname
+FROM(
+	SELECT st.course course, hb.name hbname, COUNT(hb.name) counthb,
+	ROW_NUMBER() OVER (PARTITION BY course ORDER BY COUNT(hb.name) DESC) r
+	FROM student st
+	RIGHT JOIN student_hobby sh ON sh.student_id = st.id
+	LEFT JOIN hobby hb ON hb.id = sh.hobby_id
+	GROUP BY st.course, hb.name
+) q
+WHERE r<= 1
+GROUP BY q.course, q.hbname;
 --23
 CREATE OR REPLACE VIEW vo AS
 SELECT hb.NAME, COUNT(*) popularity, hb.risk
