@@ -263,25 +263,30 @@ $$
 call body_mass_index(0);
 --12
 BEGIN;
-ALTER TABLE people ADD COLUMN sibling_id int;
+CREATE TABLE relatives (person_id int REFERENCES people(id), relative_id int REFERENCES people(id));
 COMMIT;
 END;
 --13
 CREATE OR REPLACE PROCEDURE new_person(IN new_name varchar, new_surname varchar,
 											  new_birth_date date, new_growth real,
 											  new_weight real, new_eyes varchar,
-											  new_hair varchar, new_sibling_id int)
+											  new_hair varchar, relative_id int)
 LANGUAGE plpgsql
 AS $$
+DECLARE
+	rid int;
 BEGIN
-	INSERT INTO people (name, surname, birth_date, growth, weight, eyes, hair, sibling_id)
-	VALUES (new_name, new_surname, new_birth_date, new_growth, new_weight, new_eyes, new_hair, new_sibling_id);
+	INSERT INTO people (name, surname, birth_date, growth, weight, eyes, hair)
+	VALUES (new_name, new_surname, new_birth_date, new_growth, new_weight, new_eyes, new_hair)
+	RETURNING id INTO rid;
+ 	INSERT INTO relatives(person_id, relative_id)
+ 	VALUES (rid, relative_id);
+	INSERT INTO relatives(person_id, relative_id)
+ 	VALUES (relative_id, rid);
 END;
 $$;
 
-
 call new_person('Lev', 'Muril', '1988-12-12'::date, 180.2, 70.4, 'green', 'blond', 1);
-select * from people;
 --14
 BEGIN;
 ALTER TABLE people ADD COLUMN update_date date;
