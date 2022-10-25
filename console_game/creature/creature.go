@@ -76,7 +76,7 @@ func (c *Creature) GetStatus() bool {
 }
 
 func (c *Creature) Sleep() {
-	fmt.Println("You sleep all day")
+	fmt.Println("You fell asleep")
 	c.Burrow_length -= 2
 	c.Health += 20
 	c.Respect -= 2
