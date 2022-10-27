@@ -1,7 +1,7 @@
 package game
 
 import (
-	"console_game/creature"
+	"console_game/game/creature"
 	"fmt"
 )
 
@@ -23,6 +23,8 @@ func StartGame() {
 			fight()
 		case "4":
 			player.Sleep()
+		default:
+			continue
 		}
 		if player.GetStatus() {
 			fmt.Println("Game over :(")
@@ -46,6 +48,9 @@ func dig() {
 		player.Dig("intensively")
 	case "2":
 		player.Dig("lazily")
+	default:
+		dig()
+		return
 	}
 	fmt.Print(player.GetСrParams())
 }
@@ -59,6 +64,9 @@ func eat() {
 		player.Eat("withered")
 	case "2":
 		player.Eat("green")
+	default:
+		eat()
+		return
 	}
 	fmt.Print(player.GetСrParams())
 }
@@ -74,6 +82,9 @@ func fight() {
 		player.Fight("normal")
 	case "3":
 		player.Fight("hard")
+	default:
+		fight()
+		return
 	}
 	fmt.Print(player.GetСrParams())
 }
