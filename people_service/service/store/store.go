@@ -30,7 +30,7 @@ func NewStore(connString string) *Store {
 	//migration
 	driver, err := postgres.WithInstance(conn, &postgres.Config{})
 	m, err := migrate.NewWithDatabaseInstance(
-		"file:../../1_initial.up.sql",
+		"file:../../migrations/1_initial.up.sql",
 		"postgres", driver)
 	m.Up()
 
