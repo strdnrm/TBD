@@ -8,7 +8,7 @@ import (
 var player creature.Creature
 
 func StartGame() {
-	player = creature.NewCreature()
+	player = creature.New()
 	for {
 		fmt.Print(player.GetСrParams())
 		fmt.Println("Now is the day. What are you going to do?\n1) Dig\n2) Eat\n3) Fight\n4) Sleep")

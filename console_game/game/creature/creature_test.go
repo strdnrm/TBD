@@ -3,22 +3,22 @@ package creature
 import "testing"
 
 func TestDig(t *testing.T) {
-	p := NewCreature()
+	p := New()
 	expected := Creature{
-		Burrow_length: p.Burrow_length + 5,
-		Health:        p.Health - 30,
-		Respect:       p.Respect,
-		Weight:        p.Weight,
+		BurrowLength: p.BurrowLength + 5,
+		Health:       p.Health - 30,
+		Respect:      p.Respect,
+		Weight:       p.Weight,
 	}
 	p.Dig("intensively")
 	if p != expected {
 		t.Error("Incorrect parameter change")
 	}
 	expected = Creature{
-		Burrow_length: p.Burrow_length + 2,
-		Health:        p.Health - 10,
-		Respect:       p.Respect,
-		Weight:        p.Weight,
+		BurrowLength: p.BurrowLength + 2,
+		Health:       p.Health - 10,
+		Respect:      p.Respect,
+		Weight:       p.Weight,
 	}
 	p.Dig("lazily")
 	if p != expected {
@@ -27,22 +27,22 @@ func TestDig(t *testing.T) {
 }
 
 func TestEat(t *testing.T) {
-	p := NewCreature()
+	p := New()
 	expected := Creature{
-		Burrow_length: p.Burrow_length,
-		Health:        p.Health + 10,
-		Respect:       p.Respect,
-		Weight:        p.Weight + 15,
+		BurrowLength: p.BurrowLength,
+		Health:       p.Health + 10,
+		Respect:      p.Respect,
+		Weight:       p.Weight + 15,
 	}
 	p.Eat("withered")
 	if p != expected {
 		t.Error("Incorrect parameter change")
 	}
 	expected = Creature{
-		Burrow_length: p.Burrow_length,
-		Health:        p.Health - 30,
-		Respect:       p.Respect,
-		Weight:        p.Weight,
+		BurrowLength: p.BurrowLength,
+		Health:       p.Health - 30,
+		Respect:      p.Respect,
+		Weight:       p.Weight,
 	}
 	p.Eat("green")
 	if p != expected {
@@ -51,7 +51,7 @@ func TestEat(t *testing.T) {
 }
 
 func TestFight(t *testing.T) {
-	p := NewCreature()
+	p := New()
 	bfrfight := p
 	p.Fight("normal")
 	if p == bfrfight {
@@ -60,12 +60,12 @@ func TestFight(t *testing.T) {
 }
 
 func TestSleep(t *testing.T) {
-	p := NewCreature()
+	p := New()
 	expected := Creature{
-		Burrow_length: p.Burrow_length - 2,
-		Health:        p.Health + 20,
-		Respect:       p.Respect - 2,
-		Weight:        p.Weight - 5,
+		BurrowLength: p.BurrowLength - 2,
+		Health:       p.Health + 20,
+		Respect:      p.Respect - 2,
+		Weight:       p.Weight - 5,
 	}
 	p.Sleep()
 	if p != expected {

@@ -10,31 +10,30 @@ type EatMode string
 type EnemyType string
 
 type Creature struct {
-	Burrow_length int
-	Health        int
-	Respect       int
-	Weight        int
+	BurrowLength int
+	Health       int
+	Respect      int
+	Weight       int
 }
 
-func NewCreature() Creature {
-	var cr = Creature{
-		Burrow_length: 10,
-		Health:        100,
-		Respect:       20,
-		Weight:        30,
+func New() Creature {
+	return Creature{
+		BurrowLength: 10,
+		Health:       100,
+		Respect:      20,
+		Weight:       30,
 	}
-	return cr
 }
 
 func (c *Creature) Dig(dm DigMode) {
 	switch dm {
 	case "intensively":
 		fmt.Println("You dig hard")
-		c.Burrow_length += 5
+		c.BurrowLength += 5
 		c.Health -= 30
 	case "lazily":
 		fmt.Println("You lazily dig")
-		c.Burrow_length += 2
+		c.BurrowLength += 2
 		c.Health -= 10
 	}
 }
@@ -72,12 +71,12 @@ func (c *Creature) Fight(et EnemyType) {
 }
 
 func (c *Creature) GetStatus() bool {
-	return c.Health <= 0 || c.Burrow_length <= 0 || c.Respect <= 0 || c.Weight <= 0
+	return c.Health <= 0 || c.BurrowLength <= 0 || c.Respect <= 0 || c.Weight <= 0
 }
 
 func (c *Creature) Sleep() {
 	fmt.Println("You fell asleep")
-	c.Burrow_length -= 2
+	c.BurrowLength -= 2
 	c.Health += 20
 	c.Respect -= 2
 	c.Weight -= 5
@@ -85,7 +84,7 @@ func (c *Creature) Sleep() {
 
 func (c *Creature) GetСrParams() string {
 	return fmt.Sprintf("Health: %d Burrow length: %d Respect: %d Weight: %d\n",
-		c.Health, c.Burrow_length, c.Respect, c.Weight)
+		c.Health, c.BurrowLength, c.Respect, c.Weight)
 }
 
 func fightRes(c *Creature, enemyWeight int, res int) {
