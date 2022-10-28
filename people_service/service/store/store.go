@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"os"
 	"strconv"
 
-	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -27,11 +29,24 @@ func NewStore(connString string) *Store {
 	if err != nil {
 		panic(err)
 	}
-	//migration
-	driver, err := postgres.WithInstance(conn, &postgres.Config{})
+
+	db, err := sql.Open("postgres", connString)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		panic(err)
+	}
+
 	m, err := migrate.NewWithDatabaseInstance(
 		"file:../../migrations/1_initial.up.sql",
 		"postgres", driver)
+	if err != nil {
+		panic(nil)
+	}
 	m.Up()
 
 	return &Store{
@@ -65,6 +80,10 @@ func (s *Store) ListPeople() ([]People, error) {
 			ID:   i,
 			Name: name,
 		})
+
+		if rows.Err() != nil {
+			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
+		}
 	}
 	return res, err
 }
