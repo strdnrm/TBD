@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"os"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v4"
@@ -47,6 +48,9 @@ func (s *Store) AddUsertg(u Usertg) {
 	VALUES ($1);
 	`, u.Username)
 	if err != nil {
-		log.Panic(err)
+		var pgErr
+
+		Warning := log.New(os.Stdout, "\u001b[33mWARNING: \u001B[0m", log.LstdFlags|log.Lshortfile)
+		Warning.Println("Username already exists")
 	}
 }

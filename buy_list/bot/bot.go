@@ -34,39 +34,44 @@ func StartBot() {
 			continue
 		}
 
-		s.AddUsertg(store.Usertg{
-			Username: update.Message.From.UserName,
-		})
-
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-		msg.ReplyToMessageID = update.Message.MessageID
-
 		if update.Message.IsCommand() {
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			msg.ReplyToMessageID = update.Message.MessageID
 			switch update.Message.Command() {
 			case "start":
 				msg.ReplyMarkup = numericKeyboard
 				msg.Text = "Привет! Я бот, который может управлять вашими покупками и мониторить срок годности продуктов."
-			case "":
+				s.AddUsertg(store.Usertg{
+					Username: update.Message.From.UserName,
+				})
+			case "test":
+				msg.Text = "Test command worked"
+			default:
 				msg.Text = "Неверная команда :("
 			}
+			if _, err := bot.Send(msg); err != nil {
+				log.Fatal(err)
+			}
 
-		}
+		} else {
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			msg.ReplyToMessageID = update.Message.MessageID
+			switch update.Message.Text {
+			case numericKeyboard.Keyboard[0][0].Text:
+				msg.Text = "Введите название продукта"
+				msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
 
-		switch update.Message.Text {
-		case numericKeyboard.Keyboard[0][0].Text:
-			msg.Text = "Введите название продукта"
-			msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+			case "open":
+				msg.ReplyMarkup = numericKeyboard
+			case "close":
+				msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+			}
 
-		case "open":
-			msg.ReplyMarkup = numericKeyboard
-		case "close":
-			msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
-		}
-
-		if _, err := bot.Send(msg); err != nil {
-			log.Fatal(err)
+			if _, err := bot.Send(msg); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
@@ -90,7 +95,7 @@ func GetConn() *store.Store {
 	if err != nil {
 		log.Fatal("Error during Unmarshal(): ", err)
 	}
-	s := fmt.Sprintf("user=%s password=%s host=localhost port=5432 dbname=tgbot sslmode=verify-ca pool_max_conns=10", data.User, data.Password)
+	s := fmt.Sprintf("postgresql://%s:%s@localhost:5433/", data.User, data.Password)
 	return store.NewStore(s)
 }
 
