@@ -2,9 +2,9 @@ package bot
 
 import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-var numericKeyboard = tgbotapi.NewReplyKeyboard(
+var startKeyboard = tgbotapi.NewReplyKeyboard(
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("Добавить в список покупок"),
+		tgbotapi.NewKeyboardButton("Список покупок"),
 	),
 	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton("Добавить в холодильник"),
@@ -17,6 +17,23 @@ var numericKeyboard = tgbotapi.NewReplyKeyboard(
 	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton("Просмотреть использованных продуктов"),
 		tgbotapi.NewKeyboardButton("Статистика"),
+	),
+)
+
+var buylistKeyboard = tgbotapi.NewReplyKeyboard(
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("Добавить товар в список покупок"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("Список"),
+		tgbotapi.NewKeyboardButton("Отмена"),
+	),
+)
+
+var deleteKeyboard = tgbotapi.NewInlineKeyboardMarkup(
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Удалить", "datahet"),
+		tgbotapi.NewInlineKeyboardButtonData("Добавить в холодильник", "addfirdge"),
 	),
 )
 

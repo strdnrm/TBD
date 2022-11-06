@@ -3,8 +3,10 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v4"
@@ -100,5 +102,41 @@ func (s *Store) AddProductToBuyList(p *Product) {
 		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
 		Error.Println("Add product error ", err)
 	}
+
+}
+
+func (s *Store) GetBuyList(username string) []Product {
+	// get name wight buydate
+	rows, err := s.conn.Query(context.Background(), `
+	SELECT product.name, buy_list.weight, buy_list.buy_time FROM buy_list
+	JOIN product ON product.id = buy_list.product_id
+	JOIN usertg ON usertg.id = buy_list.user_id
+	WHERE usertg.username = $1;
+	`, username)
+	if err != nil {
+		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+		Error.Println("Getting buy list ", err)
+	}
+	defer rows.Close()
+	var list []Product
+	for rows.Next() {
+		p := Product{}
+		// var tmppp pgtype.Timestamptz
+		var tmpTime time.Time
+		if err := rows.Scan(&p.Name, &p.Weight, &tmpTime); err != nil {
+			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+			Error.Println("Failed scan ", err)
+		}
+		p.BuyDate = tmpTime.Format(time.RFC850)
+		list = append(list, p)
+
+		if rows.Err() != nil {
+			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
+		}
+	}
+	return list
+}
+
+func (s *Store) DeleteFromBuyListBy() {
 
 }

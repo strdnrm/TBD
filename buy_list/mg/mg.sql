@@ -1,6 +1,5 @@
-BEGIN;
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+BEGIN;
 
 CREATE TABLE usertg (
 	id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (), 
@@ -16,7 +15,7 @@ CREATE TABLE buy_list (
 	user_id UUID REFERENCES usertg(id),
 	product_id UUID REFERENCES product(id),
 	weight REAL,
-	but_time TIMESTAMP
+	buy_time TIMESTAMP
 );
 
 CREATE TABLE fridge (
