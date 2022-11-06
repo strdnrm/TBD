@@ -13,7 +13,6 @@ CREATE TABLE product (
 );
 
 CREATE TABLE buy_list (
-	id UUID DEFAULT uuid_generate_v4 (), 
 	user_id UUID REFERENCES usertg(id),
 	product_id UUID REFERENCES product(id),
 	weight REAL,

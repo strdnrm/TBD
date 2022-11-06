@@ -20,6 +20,18 @@ var numericKeyboard = tgbotapi.NewReplyKeyboard(
 	),
 )
 
+//global states of "fsm"
+const (
+	StateStart int = iota
+	StateAddBuyList
+	StateAddFridge
+	StateOpenProduct
+	StateFinalStatus
+	StateProductList
+	StateUsedProducts
+	StateStat
+)
+
 type TgBot struct {
 	Tkn string `json:"token"`
 }
@@ -30,9 +42,11 @@ const (
 	StateBuyDate
 )
 
-type Product struct { // 0 - name ; 1 - weight ; 2 - buydate
-	State   int
-	Name    string
-	Weight  float64
-	BuyDate string
+const (
+	StateFridgeProduct int = iota
+	StateFridgeDate
+)
+
+type Fridge struct {
+	State int
 }
