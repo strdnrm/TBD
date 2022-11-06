@@ -32,7 +32,7 @@ var buylistKeyboard = tgbotapi.NewReplyKeyboard(
 
 var deleteKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("Удалить", "datahet"),
+		tgbotapi.NewInlineKeyboardButtonData("Удалить", "deleteProductFromBuyList"),
 		tgbotapi.NewInlineKeyboardButtonData("Добавить в холодильник", "addfirdge"),
 	),
 )

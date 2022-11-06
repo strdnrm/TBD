@@ -78,7 +78,7 @@ func (s *Store) GetUserid(username string) string {
 	return id
 }
 
-func (s *Store) GetProductId(productName string) string {
+func (s *Store) CreateProductByName(productName string) string {
 	var id string
 	err := s.conn.QueryRow(context.Background(), `
 	INSERT INTO product(name)
@@ -90,6 +90,32 @@ func (s *Store) GetProductId(productName string) string {
 	}
 
 	return id
+}
+
+func (s *Store) GetProductIdByName(productName string) string {
+	var id string
+	err := s.conn.QueryRow(context.Background(), `
+	SELECT id FROM product
+	WHERE name = $1
+	`, productName).Scan(&id)
+	if err != nil {
+		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+		Error.Println("Get product id error ", err)
+	}
+
+	return id
+}
+
+func (s *Store) DeleteProductFromBuyListById(productId string) {
+	rows, err := s.conn.Query(context.Background(), `
+	DELETE FROM buy_list
+	WHERE product_id = $1
+	`, productId)
+	rows.Close()
+	if err != nil {
+		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+		Error.Println("Delete product error ", err)
+	}
 }
 
 func (s *Store) AddProductToBuyList(p *Product) {
@@ -135,8 +161,4 @@ func (s *Store) GetBuyList(username string) []Product {
 		}
 	}
 	return list
-}
-
-func (s *Store) DeleteFromBuyListBy() {
-
 }
