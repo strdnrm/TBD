@@ -7,8 +7,7 @@ var startKeyboard = tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButton("Список покупок"),
 	),
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("Добавить в холодильник"),
-		tgbotapi.NewKeyboardButton("Открыть продукт"),
+		tgbotapi.NewKeyboardButton("Холодильник"),
 	),
 	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton("Финальный статус продукта"),
@@ -33,7 +32,17 @@ var buylistKeyboard = tgbotapi.NewReplyKeyboard(
 var deleteKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("Удалить", "deleteProductFromBuyList"),
-		tgbotapi.NewInlineKeyboardButtonData("Добавить в холодильник", "addfirdge"),
+		tgbotapi.NewInlineKeyboardButtonData("Добавить в холодильник", "addToFridgeFromBuyList"),
+	),
+)
+
+var fridgeKeyboard = tgbotapi.NewReplyKeyboard(
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("Добавить продукт в холодильник"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("Список"),
+		tgbotapi.NewKeyboardButton("Отмена"),
 	),
 )
 
@@ -63,7 +72,3 @@ const (
 	StateFridgeProduct int = iota
 	StateFridgeDate
 )
-
-type Fridge struct {
-	State int
-}

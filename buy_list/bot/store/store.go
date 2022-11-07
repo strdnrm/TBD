@@ -26,6 +26,17 @@ type Product struct { // 0 - name ; 1 - weight ; 2 - buydate
 	BuyDate   string
 }
 
+type FridgeProduct struct { // 0 - name ; 1 - expire date
+	UserId      string
+	ProductId   string
+	State       int
+	Name        string
+	Opened      bool
+	Expire_date string
+	Status      string
+	Use_date    string
+}
+
 //TODO inteface
 
 type Usertg struct {
@@ -65,7 +76,7 @@ func (s *Store) AddUsertg(u *Usertg) {
 	}
 }
 
-func (s *Store) GetUserid(username string) string {
+func (s *Store) GetUseridByUsername(username string) string {
 	var id string
 	err := s.conn.QueryRow(context.Background(), `
 	SELECT id::text FROM usertg WHERE username = $1;
@@ -86,7 +97,7 @@ func (s *Store) CreateProductByName(productName string) string {
 	`, productName).Scan(&id)
 	if err != nil {
 		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Get product id error ", err)
+		Error.Println("Get product id error while creating", err)
 	}
 
 	return id
@@ -126,12 +137,12 @@ func (s *Store) AddProductToBuyList(p *Product) {
 	rows.Close()
 	if err != nil {
 		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Add product error ", err)
+		Error.Println("Add product to buy list error ", err)
 	}
 
 }
 
-func (s *Store) GetBuyList(username string) []Product {
+func (s *Store) GetBuyListByUsername(username string) []Product {
 	// get name wight buydate
 	rows, err := s.conn.Query(context.Background(), `
 	SELECT product.name, buy_list.weight, buy_list.buy_time FROM buy_list
@@ -161,4 +172,21 @@ func (s *Store) GetBuyList(username string) []Product {
 		}
 	}
 	return list
+}
+
+func (s *Store) AddProductToFridge(f *FridgeProduct) {
+	rows, err := s.conn.Query(context.Background(), `
+	INSERT INTO fridge
+	VALUES($1, $2,
+	FALSE, $3, NULL, NULL)
+	`, f.UserId, f.ProductId, f.Expire_date)
+	rows.Close()
+	if err != nil {
+		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+		Error.Println("Add product to fridge error ", err)
+	}
+}
+
+func (s *Store) GetFridgeListByUsername(usernmae string) {
+
 }
