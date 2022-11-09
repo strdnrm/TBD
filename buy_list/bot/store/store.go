@@ -17,6 +17,15 @@ type Store struct {
 	conn *pgx.Conn
 }
 
+type ApiToken struct {
+	Tkn string `json:"token"`
+}
+
+type DBdata struct {
+	User     string `json:"user"`
+	Password string `json:"password"`
+}
+
 type Product struct { // 0 - name ; 1 - weight ; 2 - buydate
 	UserId    string
 	ProductId string
@@ -156,6 +165,9 @@ func (s *Store) GetBuyListByUsername(username string) []Product {
 	}
 	defer rows.Close()
 	var list []Product
+	if rows.Err() == pgx.ErrNoRows {
+		return list
+	}
 	for rows.Next() {
 		p := Product{}
 		// var tmppp pgtype.Timestamptz
@@ -187,6 +199,40 @@ func (s *Store) AddProductToFridge(f *FridgeProduct) {
 	}
 }
 
-func (s *Store) GetFridgeListByUsername(usernmae string) {
+func (s *Store) GetFridgeListByUsername(username string) []FridgeProduct {
+	//get name opened expire_date  status
+	rows, err := s.conn.Query(context.Background(), `
+	SELECT pd.name, f.opened, f.expire_date
+	FROM fridge f
+	JOIN usertg ut ON ut.id = f.user_id
+	JOIN product pd ON pd.id = f.product_id
+	WHERE ut.username = $1 AND f.status IS null
+	`, username)
+	if err != nil {
+		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+		Error.Println("Getting fridge list ", err)
+	}
+	defer rows.Close()
+	var list []FridgeProduct
+	if rows.Err() == pgx.ErrNoRows {
+		return list
+	}
+	for rows.Next() {
+		f := FridgeProduct{}
+		// var tmppp pgtype.Timestamptz
+		var expDate time.Time
+		if err := rows.Scan(&f.Name, &f.Opened, &expDate); err != nil {
+			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+			Error.Println("Failed scan ", err)
+		}
+		fmt.Println("ALLEEE!!!" + f.Name)
+		f.Expire_date = expDate.Format("2006-02-01")
+		// f.Use_date = useDate.Format("2006-02-01")
+		list = append(list, f)
 
+		if rows.Err() != nil {
+			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
+		}
+	}
+	return list
 }
