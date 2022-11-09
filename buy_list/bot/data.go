@@ -32,7 +32,7 @@ var buylistKeyboard = tgbotapi.NewReplyKeyboard(
 var inlineBuylistKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("Удалить", "deleteProductFromBuyList"),
-		tgbotapi.NewInlineKeyboardButtonData("Добавить в холодильник", "addToFridgeFromBuyList"),
+		tgbotapi.NewInlineKeyboardButtonData("В холодильник", "addToFridgeFromBuyList"),
 	),
 )
 
@@ -49,7 +49,7 @@ var fridgeKeyboard = tgbotapi.NewReplyKeyboard(
 var inlineFridgeKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("Удалить", "deleteProductFromBuyList"),
-		tgbotapi.NewInlineKeyboardButtonData("Добавить в холодильник", "addToFridgeFromBuyList"),
+		tgbotapi.NewInlineKeyboardButtonData("В холодильник", "addToFridgeFromBuyList"),
 	),
 )
 

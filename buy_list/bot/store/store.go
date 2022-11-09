@@ -225,7 +225,6 @@ func (s *Store) GetFridgeListByUsername(username string) []FridgeProduct {
 			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
 			Error.Println("Failed scan ", err)
 		}
-		fmt.Println("ALLEEE!!!" + f.Name)
 		f.Expire_date = expDate.Format("2006-02-01")
 		// f.Use_date = useDate.Format("2006-02-01")
 		list = append(list, f)
