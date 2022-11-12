@@ -19,16 +19,13 @@ import (
 var (
 	p           store.Product
 	f           store.FridgeProduct
+	ur          store.Usertg
 	GlobalState int
 	logger      *zap.Logger
 	ctx         context.Context
 )
 
 func StartBot() {
-	// fmt.Println(os.Getenv("dbuser"))
-	// fmt.Println(os.Getenv("tgtoken"))
-	// fmt.Println(os.Getenv("password"))
-
 	logger = zap.NewExample()
 	defer logger.Sync()
 
@@ -56,6 +53,7 @@ func StartBot() {
 
 	p = store.Product{}
 	f = store.FridgeProduct{}
+	ur = store.Usertg{}
 
 	for update := range updates {
 		if update.Message != nil {
@@ -99,6 +97,10 @@ func StartBot() {
 					case startKeyboard.Keyboard[1][0].Text:
 						GlobalState = StateAddFridge
 						msg.ReplyMarkup = fridgeKeyboard
+						SendMessage(bot, &msg)
+					case startKeyboard.Keyboard[2][0].Text:
+						GlobalState = StateUsedProducts
+						msg.ReplyMarkup = usedProductsKeyboard
 						SendMessage(bot, &msg)
 					case "open":
 						msg.ReplyMarkup = startKeyboard
@@ -161,6 +163,18 @@ func StartBot() {
 					}
 					SendMessage(bot, &msg)
 
+				case StateUsedProducts:
+
+					switch update.Message.Text {
+					case usedProductsKeyboard.Keyboard[0][0].Text:
+						GetUsedProdcutsList(&update, s, bot, &msg)
+
+					case usedProductsKeyboard.Keyboard[2][0].Text: //cancel
+						GlobalState = StateStart
+						msg.ReplyMarkup = startKeyboard
+						SendMessage(bot, &msg)
+					}
+
 				}
 
 			}
@@ -198,12 +212,9 @@ func StartBot() {
 }
 
 func AddProduct(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
+
 	p.State = 0
-	var err error
-	p.UserId, err = s.GetUseridByUsername(ctx, update.Message.From.UserName)
-	if err != nil {
-		logger.Error("Adding prdocut error", zap.Error(err))
-	}
+
 	msg.Text = "Введите название продукта"
 }
 
@@ -228,12 +239,16 @@ func ProductList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.
 func AddingToBuyList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
 	switch p.State {
 	case 0:
-		p.Name = update.Message.Text
 		var err error
-		p.ProductId, err = s.CreateProductByName(ctx, p.Name)
+		p, err = s.CreateProductByName(ctx, update.Message.Text)
 		if err != nil {
 			logger.Error("Creating product error", zap.Error(err))
 		}
+		ur, err = s.GetUseridByUsername(ctx, update.Message.From.UserName)
+		if err != nil {
+			logger.Error("Adding prdocut error", zap.Error(err))
+		}
+		p.UserId = ur.UserId
 		msg.Text = "Введите вес/количество"
 		p.State = 1
 
@@ -300,24 +315,27 @@ func FridgeList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update,
 }
 
 func AddFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
-	f.State = 0
 	var err error
-	f.UserId, err = s.GetUseridByUsername(ctx, update.Message.From.UserName)
+	ur, err = s.GetUseridByUsername(ctx, update.Message.From.UserName)
 	if err != nil {
 		logger.Error("Getting user id error", zap.Error(err))
 	}
+	f.State = 0
+	f.UserId = ur.UserId
 	msg.Text = "Введите название продукта"
 }
 
 func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
 	switch f.State {
 	case 0:
-		f.Name = update.Message.Text
 		var err error
-		f.ProductId, err = s.CreateProductByName(ctx, f.Name)
+		p, err = s.CreateProductByName(ctx, update.Message.Text)
 		if err != nil {
 			logger.Error("Creating product error", zap.Error(err))
 		}
+		f.ProductId = p.ProductId
+		f.Name = p.Name
+
 		msg.Text = "Укажите срок годности (YYYY-MM-DD)"
 		f.State = 1
 
@@ -456,12 +474,12 @@ func AddToFridgeFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbota
 	if err != nil {
 		logger.Error("Get product error", zap.Error(err))
 	}
-	userid, err := s.GetUseridByUsername(ctx, update.CallbackQuery.From.UserName)
+	ur, err := s.GetUseridByUsername(ctx, update.CallbackQuery.From.UserName)
 	if err != nil {
 		logger.Error("Get user error", zap.Error(err))
 	}
 	f.Name = pname
-	f.UserId = userid
+	f.UserId = ur.UserId
 	f.ProductId = pid
 	f.Opened = false
 	GlobalState = StateAddFridge
@@ -469,6 +487,24 @@ func AddToFridgeFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbota
 		"Укажите срок годности (YYYY-MM-DD)")
 	SendMessage(bot, &msg)
 	f.State = 2
+}
+
+func GetUsedProdcutsList(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI, msg *tgbotapi.MessageConfig) {
+	list, err := s.GetUsedProductsByUsername(ctx, update.Message.From.UserName)
+	if err != nil {
+		logger.Error("Get used products list error", zap.Error(err))
+	}
+	if len(list) != 0 {
+		res := ""
+		for i, pr := range list {
+			res += fmt.Sprintf("%d: %s %s %s \n", i, pr.Name, pr.Status, pr.Use_date)
+		}
+		msg.Text = res
+	} else {
+		msg.Text = "Список покупок пуст"
+
+	}
+	SendMessage(bot, msg)
 }
 
 func SendMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.MessageConfig) {
@@ -479,6 +515,6 @@ func SendMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.MessageConfig) {
 }
 
 func GetConn() *store.Store {
-	s := fmt.Sprintf("postgresql://%s:%s@localhost:5433/", os.Getenv("dbuser"), os.Getenv("password"))
+	s := fmt.Sprintf("postgresql://%s:%s@localhost:5433/?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password"))
 	return store.NewStore(s)
 }

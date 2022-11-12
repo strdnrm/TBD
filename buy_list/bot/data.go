@@ -60,6 +60,18 @@ var inlineFridgeKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	),
 )
 
+var usedProductsKeyboard = tgbotapi.NewReplyKeyboard(
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("Продукты"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("Статистика за период"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("Отмена"),
+	),
+)
+
 //global states of "fsm"
 const (
 	StateStart int = iota

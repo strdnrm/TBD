@@ -30,7 +30,7 @@ type FridgeProduct struct { // 0 - name ; 1 - expire date
 	UserId      string `db:"user_id"`
 	ProductId   string `db:"product_id"`
 	State       int
-	Name        string
+	Name        string `db:"name"`
 	Opened      bool   `db:"opened"`
 	Expire_date string `db:"expire_date"`
 	Status      string `db:"status"`
@@ -52,17 +52,16 @@ type BuyList struct {
 //TODO inteface
 
 func NewStore(connString string) *Store {
-
 	conn, err := pgx.Connect(context.Background(), connString)
 	if err != nil {
 		panic(err)
 	}
 
-	db, err := sqlx.Open("postgres", connString)
+	db, err := sqlx.Connect("postgres", connString)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	// defer db.Close()
 
 	return &Store{
 		conn: conn,
@@ -71,41 +70,42 @@ func NewStore(connString string) *Store {
 }
 
 func (s *Store) AddUsertg(ctx context.Context, u *Usertg) error {
-	rows, err := s.conn.Query(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO usertg(username)
 	VALUES ($1);
 	`, u.Username)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 	return nil
 }
 
-func (s *Store) GetUseridByUsername(ctx context.Context, username string) (string, error) {
-	var id string
-	err := s.conn.QueryRow(ctx, `
+func (s *Store) GetUseridByUsername(ctx context.Context, username string) (Usertg, error) {
+	u := Usertg{}
+	err := s.db.GetContext(ctx, &u, `
 	SELECT id::text FROM usertg WHERE username = $1;
-	`, username).Scan(&id)
+	`, username)
 	if err != nil {
-		return "", err
+		return u, err
 	}
-
-	return id, nil
+	return u, nil
 }
 
-func (s *Store) CreateProductByName(ctx context.Context, productName string) (string, error) {
-	var id string
+func (s *Store) CreateProductByName(ctx context.Context, productName string) (Product, error) {
+	p := Product{}
 
-	err := s.conn.QueryRow(ctx, `
+	err := s.db.GetContext(ctx, &p, `
 	INSERT INTO product(name)
 	VALUES($1) RETURNING id::text;
-	`, productName).Scan(&id)
+	`, productName)
+	p.Name = productName
+	fmt.Print("AHUEN!!!!!!! ")
+	fmt.Println(p)
 	if err != nil {
-		return "", err
+		return p, err
 	}
 
-	return id, nil
+	return p, nil
 }
 
 func (s *Store) GetProductIdByName(ctx context.Context, productName string) (string, error) {
@@ -351,4 +351,20 @@ func (s *Store) GetFridgeListByUsernameExpDate(ctx context.Context, username str
 		}
 	}
 	return list, nil
+}
+
+func (s *Store) GetUsedProductsByUsername(ctx context.Context, username string) ([]FridgeProduct, error) {
+	products := []FridgeProduct{}
+	err := s.db.SelectContext(ctx, &products, `
+	SELECT pd.name, f.status, f.use_date
+	FROM fridge f
+	JOIN usertg ut ON ut.id = f.user_id
+	JOIN product pd ON pd.id = f.product_id
+	WHERE ut.username = $1 AND f.status IS NOT null
+	ORDER BY f.expire_date, pd.name
+	`, username)
+	if err != nil {
+		return products, err
+	}
+	return products, err
 }
