@@ -10,11 +10,9 @@ var startKeyboard = tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButton("Холодильник"),
 	),
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("Финальный статус продукта"),
-		tgbotapi.NewKeyboardButton("Просмотреть список продуктов"),
+		tgbotapi.NewKeyboardButton("Использованные продукты"),
 	),
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("Просмотреть использованных продуктов"),
 		tgbotapi.NewKeyboardButton("Статистика"),
 	),
 )
@@ -41,15 +39,24 @@ var fridgeKeyboard = tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButton("Добавить продукт в холодильник"),
 	),
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("Список"),
+		tgbotapi.NewKeyboardButton("Список по алфавиту"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("Список по сроку годности"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton("Отмена"),
 	),
 )
 
 var inlineFridgeKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("Удалить", "deleteProductFromBuyList"),
-		tgbotapi.NewInlineKeyboardButtonData("В холодильник", "addToFridgeFromBuyList"),
+		tgbotapi.NewInlineKeyboardButtonData("Удалить", "deleteProductFromFridge"),
+		tgbotapi.NewInlineKeyboardButtonData("Открыть", "openProductFromFridge"),
+	),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Приготовлен", "setProductCooked"),
+		tgbotapi.NewInlineKeyboardButtonData("Выкинут", "setProductThrown"),
 	),
 )
 
@@ -58,9 +65,6 @@ const (
 	StateStart int = iota
 	StateAddBuyList
 	StateAddFridge
-	StateOpenProduct
-	StateFinalStatus
-	StateProductList
 	StateUsedProducts
 	StateStat
 )

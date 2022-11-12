@@ -16,16 +16,6 @@ import (
 type Store struct {
 	conn *pgx.Conn
 }
-
-type ApiToken struct {
-	Tkn string `json:"token"`
-}
-
-type DBdata struct {
-	User     string `json:"user"`
-	Password string `json:"password"`
-}
-
 type Product struct { // 0 - name ; 1 - weight ; 2 - buydate
 	UserId    string
 	ProductId string
@@ -70,88 +60,132 @@ func NewStore(connString string) *Store {
 	}
 }
 
-func (s *Store) AddUsertg(u *Usertg) {
+func (s *Store) AddUsertg(u *Usertg) error {
 	rows, err := s.conn.Query(context.Background(), `
 	INSERT INTO usertg(username)
 	VALUES ($1);
 	`, u.Username)
 	defer rows.Close()
 	if err != nil {
-		//TODO check error types
-		//var pgErr
-
-		Warning := log.New(os.Stdout, "\u001b[33mWARNING: \u001B[0m", log.LstdFlags|log.Lshortfile)
-		Warning.Println("Username already exists")
+		return err
 	}
+	return nil
 }
 
-func (s *Store) GetUseridByUsername(username string) string {
+func (s *Store) GetUseridByUsername(username string) (string, error) {
 	var id string
 	err := s.conn.QueryRow(context.Background(), `
 	SELECT id::text FROM usertg WHERE username = $1;
 	`, username).Scan(&id)
 	if err != nil {
-		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Get userid error ", err)
+		return "", err
 	}
 
-	return id
+	return id, nil
 }
 
-func (s *Store) CreateProductByName(productName string) string {
+func (s *Store) CreateProductByName(productName string) (string, error) {
 	var id string
 	err := s.conn.QueryRow(context.Background(), `
 	INSERT INTO product(name)
 	VALUES($1) RETURNING id::text;
 	`, productName).Scan(&id)
 	if err != nil {
-		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Get product id error while creating", err)
+		return "", err
 	}
 
-	return id
+	return id, nil
 }
 
-func (s *Store) GetProductIdByName(productName string) string {
+func (s *Store) GetProductIdByName(productName string) (string, error) {
 	var id string
 	err := s.conn.QueryRow(context.Background(), `
 	SELECT id FROM product
 	WHERE name = $1
 	`, productName).Scan(&id)
 	if err != nil {
-		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Get product id error ", err)
+		return "", err
 	}
 
-	return id
+	return id, nil
 }
 
-func (s *Store) DeleteProductFromBuyListById(productId string) {
+func (s *Store) DeleteProductFromBuyListById(productId string) error {
 	rows, err := s.conn.Query(context.Background(), `
 	DELETE FROM buy_list
 	WHERE product_id = $1
 	`, productId)
 	rows.Close()
 	if err != nil {
-		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Delete product error ", err)
+		return err
 	}
+	return nil
 }
 
-func (s *Store) AddProductToBuyList(p *Product) {
+func (s *Store) DeleteProductFromFridgeById(productId string) error {
+	rows, err := s.conn.Query(context.Background(), `
+	DELETE FROM fridge
+	WHERE product_id = $1
+	`, productId)
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) OpenProductFromFridgeById(productId string, expDate string) error {
+	rows, err := s.conn.Query(context.Background(), `
+	UPDATE fridge 
+	SET opened = true, expire_date = $1
+	WHERE product_id = $2
+	`, expDate, productId)
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) SetCookedProductFromFridgeById(productId string, useDate string) error {
+	rows, err := s.conn.Query(context.Background(), `
+	UPDATE fridge 
+	SET status = 'cooked', use_date = $1
+	WHERE product_id = $2
+	`, useDate, productId)
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) SetThrownProductFromFridgeById(productId string, useDate string) error {
+	rows, err := s.conn.Query(context.Background(), `
+	UPDATE fridge 
+	SET status = 'thrown', use_date = $1
+	WHERE product_id = $2
+	`, useDate, productId)
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) AddProductToBuyList(p *Product) error {
 	rows, err := s.conn.Query(context.Background(), `
 	INSERT INTO buy_list
 	VALUES($1, $2, $3, $4)
 	`, p.UserId, p.ProductId, p.Weight, p.BuyDate)
 	rows.Close()
 	if err != nil {
-		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Add product to buy list error ", err)
+		return err
 	}
-
+	return nil
 }
 
-func (s *Store) GetBuyListByUsername(username string) []Product {
+func (s *Store) GetBuyListByUsername(username string) ([]Product, error) {
 	// get name wight buydate
 	rows, err := s.conn.Query(context.Background(), `
 	SELECT product.name, buy_list.weight, buy_list.buy_time FROM buy_list
@@ -160,13 +194,12 @@ func (s *Store) GetBuyListByUsername(username string) []Product {
 	WHERE usertg.username = $1;
 	`, username)
 	if err != nil {
-		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Getting buy list ", err)
+		return nil, err
 	}
 	defer rows.Close()
 	var list []Product
 	if rows.Err() == pgx.ErrNoRows {
-		return list
+		return list, nil
 	}
 	for rows.Next() {
 		p := Product{}
@@ -183,10 +216,10 @@ func (s *Store) GetBuyListByUsername(username string) []Product {
 			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
 		}
 	}
-	return list
+	return list, nil
 }
 
-func (s *Store) AddProductToFridge(f *FridgeProduct) {
+func (s *Store) AddProductToFridge(f *FridgeProduct) error {
 	rows, err := s.conn.Query(context.Background(), `
 	INSERT INTO fridge
 	VALUES($1, $2,
@@ -194,12 +227,12 @@ func (s *Store) AddProductToFridge(f *FridgeProduct) {
 	`, f.UserId, f.ProductId, f.Expire_date)
 	rows.Close()
 	if err != nil {
-		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Add product to fridge error ", err)
+		return err
 	}
+	return nil
 }
 
-func (s *Store) GetFridgeListByUsername(username string) []FridgeProduct {
+func (s *Store) GetFridgeListByUsername(username string) ([]FridgeProduct, error) {
 	//get name opened expire_date  status
 	rows, err := s.conn.Query(context.Background(), `
 	SELECT pd.name, f.opened, f.expire_date
@@ -209,13 +242,12 @@ func (s *Store) GetFridgeListByUsername(username string) []FridgeProduct {
 	WHERE ut.username = $1 AND f.status IS null
 	`, username)
 	if err != nil {
-		var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-		Error.Println("Getting fridge list ", err)
+		return nil, err
 	}
 	defer rows.Close()
 	var list []FridgeProduct
 	if rows.Err() == pgx.ErrNoRows {
-		return list
+		return list, nil
 	}
 	for rows.Next() {
 		f := FridgeProduct{}
@@ -225,7 +257,7 @@ func (s *Store) GetFridgeListByUsername(username string) []FridgeProduct {
 			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
 			Error.Println("Failed scan ", err)
 		}
-		f.Expire_date = expDate.Format("2006-02-01")
+		f.Expire_date = expDate.Format("2006-01-02")
 		// f.Use_date = useDate.Format("2006-02-01")
 		list = append(list, f)
 
@@ -233,5 +265,79 @@ func (s *Store) GetFridgeListByUsername(username string) []FridgeProduct {
 			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
 		}
 	}
-	return list
+	return list, nil
+}
+
+func (s *Store) GetFridgeListByUsernameAlpha(username string) ([]FridgeProduct, error) {
+	//get name opened expire_date  status
+	rows, err := s.conn.Query(context.Background(), `
+	SELECT pd.name, f.opened, f.expire_date
+	FROM fridge f
+	JOIN usertg ut ON ut.id = f.user_id
+	JOIN product pd ON pd.id = f.product_id
+	WHERE ut.username = $1 AND f.status IS null
+	ORDER BY pd.name
+	`, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []FridgeProduct
+	if rows.Err() == pgx.ErrNoRows {
+		return list, nil
+	}
+	for rows.Next() {
+		f := FridgeProduct{}
+		// var tmppp pgtype.Timestamptz
+		var expDate time.Time
+		if err := rows.Scan(&f.Name, &f.Opened, &expDate); err != nil {
+			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+			Error.Println("Failed scan ", err)
+		}
+		f.Expire_date = expDate.Format("2006-01-02")
+		// f.Use_date = useDate.Format("2006-02-01")
+		list = append(list, f)
+
+		if rows.Err() != nil {
+			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
+		}
+	}
+	return list, nil
+}
+
+func (s *Store) GetFridgeListByUsernameExpDate(username string) ([]FridgeProduct, error) {
+	//get name opened expire_date  status
+	rows, err := s.conn.Query(context.Background(), `
+	SELECT pd.name, f.opened, f.expire_date
+	FROM fridge f
+	JOIN usertg ut ON ut.id = f.user_id
+	JOIN product pd ON pd.id = f.product_id
+	WHERE ut.username = $1 AND f.status IS null
+	ORDER BY f.expire_date, pd.name
+	`, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []FridgeProduct
+	if rows.Err() == pgx.ErrNoRows {
+		return list, nil
+	}
+	for rows.Next() {
+		f := FridgeProduct{}
+		// var tmppp pgtype.Timestamptz
+		var expDate time.Time
+		if err := rows.Scan(&f.Name, &f.Opened, &expDate); err != nil {
+			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
+			Error.Println("Failed scan ", err)
+		}
+		f.Expire_date = expDate.Format("2006-01-02")
+		// f.Use_date = useDate.Format("2006-02-01")
+		list = append(list, f)
+
+		if rows.Err() != nil {
+			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
+		}
+	}
+	return list, nil
 }
