@@ -12,9 +12,6 @@ var startKeyboard = tgbotapi.NewReplyKeyboard(
 	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton("Использованные продукты"),
 	),
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("Статистика"),
-	),
 )
 
 var buylistKeyboard = tgbotapi.NewReplyKeyboard(
@@ -94,4 +91,9 @@ const (
 const (
 	StateFridgeProduct int = iota
 	StateFridgeDate
+)
+
+const (
+	StateFromDate int = iota
+	StateToDate
 )

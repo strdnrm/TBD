@@ -38,6 +38,12 @@ type Usertg struct {
 	Username string `db:"username"`
 }
 
+type PeriodStat struct {
+	State    int
+	FromDate string
+	ToDate   string
+}
+
 // type BuyList struct {
 // 	UserId    string  `db:"user_id"`
 // 	ProductId string  `db:"product_id"`
@@ -87,6 +93,7 @@ func (s *Store) GetUserByUsername(ctx context.Context, username string) (Usertg,
 	return u, nil
 }
 
+// problem with the same product name
 func (s *Store) CreateProductByName(ctx context.Context, productName string) (Product, error) {
 	p := Product{}
 
@@ -267,10 +274,66 @@ func (s *Store) GetUsedProductsByUsername(ctx context.Context, username string) 
 	JOIN usertg ut ON ut.id = f.user_id
 	JOIN product pd ON pd.id = f.product_id
 	WHERE ut.username = $1 AND f.status IS NOT null
-	ORDER BY f.expire_date, pd.name
+	ORDER BY f.use_date
 	`, username)
 	if err != nil {
 		return products, err
 	}
-	return products, err
+	return products, nil
+}
+
+func (s *Store) GetUsedProductsInPeriodByUsername(ctx context.Context,
+	username string, fromDate string, toDate string) ([]FridgeProduct, error) {
+	products := []FridgeProduct{}
+	err := s.db.SelectContext(ctx, &products, `
+	SELECT pd.name, f.status, f.use_date
+	FROM fridge f
+	JOIN usertg ut ON ut.id = f.user_id
+	JOIN product pd ON pd.id = f.product_id
+	WHERE ut.username = $1
+		AND f.status IS NOT null
+		AND f.use_date >= $2
+		AND f.use_date <= $3
+	ORDER BY f.use_date
+	`, username, fromDate, toDate)
+	if err != nil {
+		return products, err
+	}
+	return products, nil
+}
+
+func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context,
+	username string, fromDate string, toDate string) (int, error) {
+	var cookedCount int
+	err := s.db.GetContext(ctx, &cookedCount, `
+	SELECT COUNT(*)
+	FROM fridge f
+	JOIN usertg ut ON ut.id = f.user_id
+	WHERE ut.username = $1
+	AND f.status = 'cooked'
+		AND f.use_date >= $2
+		AND f.use_date <= $3
+	`, username, fromDate, toDate)
+	if err != nil {
+		return -1, err
+	}
+	return cookedCount, nil
+}
+
+func (s *Store) GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context,
+	username string, fromDate string, toDate string) (int, error) {
+	var cookedCount int
+	err := s.db.GetContext(ctx, &cookedCount, `
+	SELECT COUNT(*)
+	FROM fridge f
+	JOIN usertg ut ON ut.id = f.user_id
+	WHERE ut.username = $1
+	AND f.status = 'thrown'
+		AND f.use_date >= $2
+		AND f.use_date <= $3
+	`, username, fromDate, toDate)
+	if err != nil {
+		return -1, err
+	}
+	return cookedCount, nil
 }

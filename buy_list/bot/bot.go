@@ -15,6 +15,7 @@ var (
 	p           store.Product
 	f           store.FridgeProduct
 	ur          store.Usertg
+	ps          store.PeriodStat
 	GlobalState int
 	logger      *zap.Logger
 	ctx         context.Context
@@ -49,6 +50,7 @@ func StartBot() {
 	p = store.Product{}
 	f = store.FridgeProduct{}
 	ur = store.Usertg{}
+	ps = store.PeriodStat{}
 
 	for update := range updates {
 		if update.Message != nil {
@@ -127,13 +129,21 @@ func StartBot() {
 				case StateUsedProducts:
 
 					switch update.Message.Text {
-					case usedProductsKeyboard.Keyboard[0][0].Text:
-						GetUsedProdcutsList(&update, s, bot, &msg)
+					case usedProductsKeyboard.Keyboard[0][0].Text: // get list of use products
+						GetAllUsedProducts(&update, s, bot, &msg)
 
+					case usedProductsKeyboard.Keyboard[1][0].Text:
+						// GlobalState = StateUsedProducts
+						msg.Text = "Введите начальную дату (YYYY-MM-DD)"
+						ps.State = StateFromDate
+						SendMessage(bot, &msg)
 					case usedProductsKeyboard.Keyboard[2][0].Text: //cancel
 						GlobalState = StateStart
 						msg.ReplyMarkup = startKeyboard
 						SendMessage(bot, &msg)
+					default:
+						UsedProductStat(&msg, &update, s, bot)
+
 					}
 
 				}
@@ -164,7 +174,7 @@ func StartBot() {
 				SetProductThrownFromFridge(&update, s, bot)
 			}
 
-			if _, err := bot.Request(callback); err != nil { //
+			if _, err := bot.Request(callback); err != nil {
 				logger.Panic(err.Error())
 			}
 		}

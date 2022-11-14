@@ -131,8 +131,6 @@ func FridgeList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update,
 				resText += "Не вскрыт "
 			}
 			// NOW add expire and other dates
-			fmt.Println("aaa")
-			fmt.Println(pr.Expire_date)
 			// expdate, err := time.Parse("2006-01-02", pr.Expire_date)
 			expdate, err := time.Parse(time.RFC3339, pr.Expire_date)
 
@@ -241,6 +239,51 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 	}
 }
 
+func UsedProductStat(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
+	switch ps.State {
+
+	case StateFromDate:
+		if ts, err := time.Parse("2006-01-02", update.Message.Text); err != nil {
+			msg.Text = "Неверный формат"
+		} else {
+			ps.FromDate = ts.Format("2006-01-02")
+			ps.State = StateToDate
+			msg.Text = "Введите конечную дату (YYYY-MM-DD)"
+		}
+
+	case StateToDate:
+		if ts, err := time.Parse("2006-01-02", update.Message.Text); err != nil {
+			msg.Text = "Неверный формат"
+		} else {
+			fd, err := time.Parse("2006-01-02", ps.FromDate)
+			if err != nil {
+				panic(err)
+			}
+			if ts.Before(fd) {
+				msg.Text = "Некорректный период. Введите конечную дату (YYYY-MM-DD)"
+			} else {
+				ps.ToDate = ts.Format("2006-01-02")
+
+				GetPeriodUsedProducts(update, s, bot, msg, ps.FromDate, ps.ToDate)
+				cc, err := s.GetCountThrownUsedProductsInPeriodByUsername(ctx, update.Message.From.UserName, ps.FromDate, ps.ToDate)
+				if err != nil {
+					logger.Error("Get count used products in period list error", zap.Error(err))
+				}
+
+				ct, err := s.GetCountThrownUsedProductsInPeriodByUsername(ctx, update.Message.From.UserName, ps.FromDate, ps.ToDate)
+				if err != nil {
+					logger.Error("Get count used products in period list error", zap.Error(err))
+				}
+
+				msg.Text = fmt.Sprintf("Выкинуто продуктов: %d\nПриготовлено: %d", cc, ct)
+				msg.ReplyMarkup = usedProductsKeyboard
+			}
+
+		}
+	}
+	SendMessage(bot, msg)
+}
+
 func DeleteProductFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	pname := strings.Fields(update.CallbackQuery.Message.Text)[1]
 	var err error
@@ -341,20 +384,39 @@ func AddToFridgeFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbota
 	f.State = 2
 }
 
-func GetUsedProdcutsList(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI, msg *tgbotapi.MessageConfig) {
+func GetAllUsedProducts(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI, msg *tgbotapi.MessageConfig) {
 	list, err := s.GetUsedProductsByUsername(ctx, update.Message.From.UserName)
 	if err != nil {
 		logger.Error("Get used products list error", zap.Error(err))
 	}
+	GetUsedProdcutsList(update, s, bot, msg, list)
+}
+
+func GetPeriodUsedProducts(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI,
+	msg *tgbotapi.MessageConfig, fromDate string, toDate string) {
+	list, err := s.GetUsedProductsInPeriodByUsername(ctx, update.Message.From.UserName, fromDate, toDate)
+	if err != nil {
+		logger.Error("Get used products in period list error", zap.Error(err))
+	}
+	GetUsedProdcutsList(update, s, bot, msg, list)
+}
+
+func GetUsedProdcutsList(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI, msg *tgbotapi.MessageConfig, list []store.FridgeProduct) {
 	if len(list) != 0 {
 		res := ""
-
 		for i, pr := range list {
 			useDate, err := time.Parse(time.RFC3339, pr.Use_date)
 			if err != nil {
 				panic(err)
 			}
-			res += fmt.Sprintf("%d: %s %s %s \n", i+1, pr.Name, pr.Status, useDate.Format("2006-01-02"))
+			var st string
+			switch pr.Status {
+			case "cooked":
+				st = "Приготовлен"
+			case "thrown":
+				st = "Выкинут"
+			}
+			res += fmt.Sprintf("%d: %s %s %s \n", i+1, pr.Name, st, useDate.Format("2006-01-02"))
 		}
 		msg.Text = res
 	} else {
