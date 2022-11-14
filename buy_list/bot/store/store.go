@@ -2,10 +2,6 @@ package store
 
 import (
 	"context"
-	"fmt"
-	"log"
-	"os"
-	"time"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v4"
@@ -21,9 +17,9 @@ type Product struct { // 0 - name ; 1 - weight ; 2 - buydate
 	UserId    string
 	ProductId string `db:"id"`
 	State     int
-	Name      string `db:"name"`
-	Weight    float64
-	BuyDate   string
+	Name      string  `db:"name"`
+	Weight    float64 `db:"weight"`
+	BuyDate   string  `db:"buy_time"`
 }
 
 type FridgeProduct struct { // 0 - name ; 1 - expire date
@@ -42,12 +38,12 @@ type Usertg struct {
 	Username string `db:"username"`
 }
 
-type BuyList struct {
-	UserId    string  `db:"user_id"`
-	ProductId string  `db:"product_id"`
-	Weight    float64 `db:"weight"`
-	BuyTime   string  `db:"buy_time"`
-}
+// type BuyList struct {
+// 	UserId    string  `db:"user_id"`
+// 	ProductId string  `db:"product_id"`
+// 	Weight    float64 `db:"weight"`
+// 	BuyTime   string  `db:"buy_time"`
+// }
 
 //TODO inteface
 
@@ -80,7 +76,7 @@ func (s *Store) AddUsertg(ctx context.Context, u *Usertg) error {
 	return nil
 }
 
-func (s *Store) GetUseridByUsername(ctx context.Context, username string) (Usertg, error) {
+func (s *Store) GetUserByUsername(ctx context.Context, username string) (Usertg, error) {
 	u := Usertg{}
 	err := s.db.GetContext(ctx, &u, `
 	SELECT id::text FROM usertg WHERE username = $1;
@@ -99,8 +95,6 @@ func (s *Store) CreateProductByName(ctx context.Context, productName string) (Pr
 	VALUES($1) RETURNING id::text;
 	`, productName)
 	p.Name = productName
-	fmt.Print("AHUEN!!!!!!! ")
-	fmt.Println(p)
 	if err != nil {
 		return p, err
 	}
@@ -108,45 +102,43 @@ func (s *Store) CreateProductByName(ctx context.Context, productName string) (Pr
 	return p, nil
 }
 
-func (s *Store) GetProductIdByName(ctx context.Context, productName string) (string, error) {
-	var id string
-	err := s.conn.QueryRow(ctx, `
+func (s *Store) GetProductByName(ctx context.Context, productName string) (Product, error) {
+	p := Product{}
+	err := s.db.GetContext(ctx, &p, `
 	SELECT id FROM product
 	WHERE name = $1
-	`, productName).Scan(&id)
+	`, productName)
 	if err != nil {
-		return "", err
+		return p, err
 	}
+	return p, nil
 
-	return id, nil
 }
 
 func (s *Store) DeleteProductFromBuyListById(ctx context.Context, productId string) error {
-	rows, err := s.conn.Query(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	DELETE FROM buy_list
 	WHERE product_id = $1
 	`, productId)
 	if err != nil {
 		return err
 	}
-	rows.Close()
 	return nil
 }
 
 func (s *Store) DeleteProductFromFridgeById(ctx context.Context, productId string) error {
-	rows, err := s.conn.Query(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	DELETE FROM fridge
 	WHERE product_id = $1
 	`, productId)
 	if err != nil {
 		return err
 	}
-	rows.Close()
 	return nil
 }
 
 func (s *Store) OpenProductFromFridgeById(ctx context.Context, productId string, expDate string) error {
-	rows, err := s.conn.Query(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	UPDATE fridge 
 	SET opened = true, expire_date = $1
 	WHERE product_id = $2
@@ -154,12 +146,11 @@ func (s *Store) OpenProductFromFridgeById(ctx context.Context, productId string,
 	if err != nil {
 		return err
 	}
-	rows.Close()
 	return nil
 }
 
 func (s *Store) SetCookedProductFromFridgeById(ctx context.Context, productId string, useDate string) error {
-	rows, err := s.conn.Query(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	UPDATE fridge 
 	SET status = 'cooked', use_date = $1
 	WHERE product_id = $2
@@ -167,17 +158,15 @@ func (s *Store) SetCookedProductFromFridgeById(ctx context.Context, productId st
 	if err != nil {
 		return err
 	}
-	rows.Close()
 	return nil
 }
 
 func (s *Store) SetThrownProductFromFridgeById(ctx context.Context, productId string, useDate string) error {
-	rows, err := s.conn.Query(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	UPDATE fridge 
 	SET status = 'thrown', use_date = $1
 	WHERE product_id = $2
 	`, useDate, productId)
-	rows.Close()
 	if err != nil {
 		return err
 	}
@@ -185,11 +174,10 @@ func (s *Store) SetThrownProductFromFridgeById(ctx context.Context, productId st
 }
 
 func (s *Store) AddProductToBuyList(ctx context.Context, p *Product) error {
-	rows, err := s.conn.Query(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO buy_list
 	VALUES($1, $2, $3, $4)
 	`, p.UserId, p.ProductId, p.Weight, p.BuyDate)
-	rows.Close()
 	if err != nil {
 		return err
 	}
@@ -198,7 +186,8 @@ func (s *Store) AddProductToBuyList(ctx context.Context, p *Product) error {
 
 func (s *Store) GetBuyListByUsername(ctx context.Context, username string) ([]Product, error) {
 	// get name wight buydate
-	rows, err := s.conn.Query(ctx, `
+	var list []Product
+	err := s.db.SelectContext(ctx, &list, `
 	SELECT product.name, buy_list.weight, buy_list.buy_time FROM buy_list
 	JOIN product ON product.id = buy_list.product_id
 	JOIN usertg ON usertg.id = buy_list.user_id
@@ -207,36 +196,15 @@ func (s *Store) GetBuyListByUsername(ctx context.Context, username string) ([]Pr
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var list []Product
-	if rows.Err() == pgx.ErrNoRows {
-		return list, nil
-	}
-	for rows.Next() {
-		p := Product{}
-		// var tmppp pgtype.Timestamptz
-		var tmpTime time.Time
-		if err := rows.Scan(&p.Name, &p.Weight, &tmpTime); err != nil {
-			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-			Error.Println("Failed scan ", err)
-		}
-		p.BuyDate = tmpTime.Format(time.RFC850)
-		list = append(list, p)
-
-		if rows.Err() != nil {
-			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
-		}
-	}
 	return list, nil
 }
 
 func (s *Store) AddProductToFridge(ctx context.Context, f *FridgeProduct) error {
-	rows, err := s.conn.Query(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO fridge
 	VALUES($1, $2,
 	FALSE, $3, NULL, NULL)
 	`, f.UserId, f.ProductId, f.Expire_date)
-	rows.Close()
 	if err != nil {
 		return err
 	}
@@ -244,8 +212,8 @@ func (s *Store) AddProductToFridge(ctx context.Context, f *FridgeProduct) error 
 }
 
 func (s *Store) GetFridgeListByUsername(ctx context.Context, username string) ([]FridgeProduct, error) {
-	//get name opened expire_date  status
-	rows, err := s.conn.Query(ctx, `
+	var list []FridgeProduct
+	err := s.db.SelectContext(ctx, &list, `
 	SELECT pd.name, f.opened, f.expire_date
 	FROM fridge f
 	JOIN usertg ut ON ut.id = f.user_id
@@ -255,33 +223,12 @@ func (s *Store) GetFridgeListByUsername(ctx context.Context, username string) ([
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var list []FridgeProduct
-	if rows.Err() == pgx.ErrNoRows {
-		return list, nil
-	}
-	for rows.Next() {
-		f := FridgeProduct{}
-		// var tmppp pgtype.Timestamptz
-		var expDate time.Time
-		if err := rows.Scan(&f.Name, &f.Opened, &expDate); err != nil {
-			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-			Error.Println("Failed scan ", err)
-		}
-		f.Expire_date = expDate.Format("2006-01-02")
-		// f.Use_date = useDate.Format("2006-02-01")
-		list = append(list, f)
-
-		if rows.Err() != nil {
-			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
-		}
-	}
 	return list, nil
 }
 
 func (s *Store) GetFridgeListByUsernameAlpha(ctx context.Context, username string) ([]FridgeProduct, error) {
-	//get name opened expire_date  status
-	rows, err := s.conn.Query(ctx, `
+	var list []FridgeProduct
+	err := s.db.SelectContext(ctx, &list, `
 	SELECT pd.name, f.opened, f.expire_date
 	FROM fridge f
 	JOIN usertg ut ON ut.id = f.user_id
@@ -292,33 +239,13 @@ func (s *Store) GetFridgeListByUsernameAlpha(ctx context.Context, username strin
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var list []FridgeProduct
-	if rows.Err() == pgx.ErrNoRows {
-		return list, nil
-	}
-	for rows.Next() {
-		f := FridgeProduct{}
-		// var tmppp pgtype.Timestamptz
-		var expDate time.Time
-		if err := rows.Scan(&f.Name, &f.Opened, &expDate); err != nil {
-			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-			Error.Println("Failed scan ", err)
-		}
-		f.Expire_date = expDate.Format("2006-01-02")
-		// f.Use_date = useDate.Format("2006-02-01")
-		list = append(list, f)
-
-		if rows.Err() != nil {
-			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
-		}
-	}
 	return list, nil
 }
 
 func (s *Store) GetFridgeListByUsernameExpDate(ctx context.Context, username string) ([]FridgeProduct, error) {
 	//get name opened expire_date  status
-	rows, err := s.conn.Query(ctx, `
+	var list []FridgeProduct
+	err := s.db.SelectContext(ctx, &list, `
 	SELECT pd.name, f.opened, f.expire_date
 	FROM fridge f
 	JOIN usertg ut ON ut.id = f.user_id
@@ -328,27 +255,6 @@ func (s *Store) GetFridgeListByUsernameExpDate(ctx context.Context, username str
 	`, username)
 	if err != nil {
 		return nil, err
-	}
-	defer rows.Close()
-	var list []FridgeProduct
-	if rows.Err() == pgx.ErrNoRows {
-		return list, nil
-	}
-	for rows.Next() {
-		f := FridgeProduct{}
-		// var tmppp pgtype.Timestamptz
-		var expDate time.Time
-		if err := rows.Scan(&f.Name, &f.Opened, &expDate); err != nil {
-			var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.Lshortfile)
-			Error.Println("Failed scan ", err)
-		}
-		f.Expire_date = expDate.Format("2006-01-02")
-		// f.Use_date = useDate.Format("2006-02-01")
-		list = append(list, f)
-
-		if rows.Err() != nil {
-			fmt.Fprintf(os.Stderr, "Scan error: %v\n", rows.Err())
-		}
 	}
 	return list, nil
 }

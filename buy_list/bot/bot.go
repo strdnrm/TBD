@@ -244,7 +244,7 @@ func AddingToBuyList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *st
 		if err != nil {
 			logger.Error("Creating product error", zap.Error(err))
 		}
-		ur, err = s.GetUseridByUsername(ctx, update.Message.From.UserName)
+		ur, err = s.GetUserByUsername(ctx, update.Message.From.UserName)
 		if err != nil {
 			logger.Error("Adding prdocut error", zap.Error(err))
 		}
@@ -316,7 +316,7 @@ func FridgeList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update,
 
 func AddFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
 	var err error
-	ur, err = s.GetUseridByUsername(ctx, update.Message.From.UserName)
+	ur, err = s.GetUserByUsername(ctx, update.Message.From.UserName)
 	if err != nil {
 		logger.Error("Getting user id error", zap.Error(err))
 	}
@@ -363,11 +363,11 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 			if err != nil {
 				logger.Error("Adding product to fridge error", zap.Error(err))
 			}
-			pid, err := s.GetProductIdByName(ctx, f.Name)
+			p, err = s.GetProductByName(ctx, f.Name)
 			if err != nil {
 				logger.Error("Getting product by name error", zap.Error(err))
 			}
-			err = s.DeleteProductFromBuyListById(ctx, pid)
+			err = s.DeleteProductFromBuyListById(ctx, p.ProductId)
 			if err != nil {
 				logger.Error("Deleting product from but list error", zap.Error(err))
 			}
@@ -395,11 +395,12 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 
 func DeleteProductFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	pname := strings.Fields(update.CallbackQuery.Message.Text)[1]
-	pid, err := s.GetProductIdByName(ctx, pname)
+	var err error
+	p, err = s.GetProductByName(ctx, pname)
 	if err != nil {
 		logger.Error("Getting product error", zap.Error(err))
 	}
-	err = s.DeleteProductFromBuyListById(ctx, pid)
+	err = s.DeleteProductFromBuyListById(ctx, p.ProductId)
 	if err != nil {
 		logger.Error("Deleting product from buy list error", zap.Error(err))
 	}
@@ -410,11 +411,12 @@ func DeleteProductFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbo
 
 func DeleteProductFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	pname := strings.Fields(update.CallbackQuery.Message.Text)[1]
-	pid, err := s.GetProductIdByName(ctx, pname)
+	var err error
+	p, err = s.GetProductByName(ctx, pname)
 	if err != nil {
 		logger.Error("Getting product error", zap.Error(err))
 	}
-	err = s.DeleteProductFromFridgeById(ctx, pid)
+	err = s.DeleteProductFromFridgeById(ctx, p.ProductId)
 	if err != nil {
 		logger.Error("Deleting product error", zap.Error(err))
 	}
@@ -425,11 +427,12 @@ func DeleteProductFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbot
 
 func OpenProductFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	pname := strings.Fields(update.CallbackQuery.Message.Text)[1]
-	pid, err := s.GetProductIdByName(ctx, pname)
+	var err error
+	p, err = s.GetProductByName(ctx, pname)
 	if err != nil {
 		logger.Error("Getting product error", zap.Error(err))
 	}
-	f.ProductId = pid
+	f.ProductId = p.ProductId
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
 		fmt.Sprintf("Продукт '%s' открыт\nВведите новый срок годности:", pname))
 	f.State = 3
@@ -438,12 +441,12 @@ func OpenProductFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotap
 
 func SetProductCookedFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	pname := strings.Fields(update.CallbackQuery.Message.Text)[1]
-	pid, err := s.GetProductIdByName(ctx, pname)
+	p, err := s.GetProductByName(ctx, pname)
 	if err != nil {
 		logger.Error("Getting product error", zap.Error(err))
 	}
 	useDate := time.Now().Format("2006-01-02")
-	err = s.SetCookedProductFromFridgeById(ctx, pid, useDate)
+	err = s.SetCookedProductFromFridgeById(ctx, p.ProductId, useDate)
 	if err != nil {
 		logger.Error("Setting cooked prodcut error error", zap.Error(err))
 	}
@@ -454,12 +457,12 @@ func SetProductCookedFromFridge(update *tgbotapi.Update, s *store.Store, bot *tg
 
 func SetProductThrownFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	pname := strings.Fields(update.CallbackQuery.Message.Text)[1]
-	pid, err := s.GetProductIdByName(ctx, pname)
+	p, err := s.GetProductByName(ctx, pname)
 	if err != nil {
 		logger.Error("Getting product error", zap.Error(err))
 	}
 	useDate := time.Now().Format("2006-01-02")
-	err = s.SetThrownProductFromFridgeById(ctx, pid, useDate)
+	err = s.SetThrownProductFromFridgeById(ctx, p.ProductId, useDate)
 	if err != nil {
 		logger.Error("Set thorwn porduct error error", zap.Error(err))
 	}
@@ -470,17 +473,18 @@ func SetProductThrownFromFridge(update *tgbotapi.Update, s *store.Store, bot *tg
 
 func AddToFridgeFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	pname := strings.Fields(update.CallbackQuery.Message.Text)[1]
-	pid, err := s.GetProductIdByName(ctx, pname)
+	var err error
+	p, err = s.GetProductByName(ctx, pname)
 	if err != nil {
 		logger.Error("Get product error", zap.Error(err))
 	}
-	ur, err := s.GetUseridByUsername(ctx, update.CallbackQuery.From.UserName)
+	ur, err := s.GetUserByUsername(ctx, update.CallbackQuery.From.UserName)
 	if err != nil {
 		logger.Error("Get user error", zap.Error(err))
 	}
 	f.Name = pname
 	f.UserId = ur.UserId
-	f.ProductId = pid
+	f.ProductId = p.ProductId
 	f.Opened = false
 	GlobalState = StateAddFridge
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
