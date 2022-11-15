@@ -203,6 +203,7 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 			}
 			msg.Text = "Товар добавлен в холодильник"
 			msg.ReplyMarkup = fridgeKeyboard
+			UpdateExpireSchedule(s, bot)
 		}
 
 	case StateFromBuyList: //for adding from buy list
@@ -226,6 +227,7 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 			msg.Text = "Товар добавлен в холодильник"
 			msg.ReplyMarkup = buylistKeyboard
 			GlobalState = StateAddBuyList
+			UpdateExpireSchedule(s, bot)
 			UpdateBuyListSchedule(s, bot)
 		}
 
@@ -241,6 +243,7 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 				logger.Error("Opennig product from fridge error", zap.Error(err))
 			}
 			msg.Text = "Срок годности изменен"
+			UpdateExpireSchedule(s, bot)
 			msg.ReplyMarkup = fridgeKeyboard
 		}
 	}
@@ -321,7 +324,9 @@ func DeleteProductFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbot
 	}
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
 		fmt.Sprintf("Продукт '%s' удален из холодильника", pname))
+
 	SendMessage(bot, &msg)
+	UpdateExpireSchedule(s, bot)
 }
 
 func OpenProductFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
@@ -335,7 +340,9 @@ func OpenProductFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotap
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
 		fmt.Sprintf("Продукт '%s' открыт\nВведите новый срок годности:", pname))
 	f.State = StateOpen
+
 	SendMessage(bot, &msg)
+	UpdateExpireSchedule(s, bot)
 }
 
 func SetProductCookedFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
@@ -352,6 +359,7 @@ func SetProductCookedFromFridge(update *tgbotapi.Update, s *store.Store, bot *tg
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
 		fmt.Sprintf("Продукт '%s' приготовлен", pname))
 	SendMessage(bot, &msg)
+	UpdateExpireSchedule(s, bot)
 }
 
 func SetProductThrownFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
@@ -368,6 +376,7 @@ func SetProductThrownFromFridge(update *tgbotapi.Update, s *store.Store, bot *tg
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
 		fmt.Sprintf("Продукт '%s' выкинут", pname))
 	SendMessage(bot, &msg)
+	UpdateExpireSchedule(s, bot)
 }
 
 func AddToFridgeFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {

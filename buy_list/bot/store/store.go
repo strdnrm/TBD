@@ -45,14 +45,6 @@ type PeriodStat struct {
 	ToDate   string
 }
 
-// type BuyListProduct struct {
-// 	UserId    string  `db:"user_id"`
-// 	ProductId string  `db:"product_id"`
-// 	Weight    float64 `db:"weight"`
-// 	BuyTime   string  `db:"buy_time"`
-// 	Name      string  `db:"name"`
-// }
-
 //TODO inteface
 
 func NewStore(connString string) *Store {
@@ -364,4 +356,19 @@ func (s *Store) GetChatIdByUserId(ctx context.Context, userid string) (int64, er
 		return chatid, err
 	}
 	return chatid, nil
+}
+
+func (s *Store) GetSoonExpireList(ctx context.Context) ([]FridgeProduct, error) {
+	products := []FridgeProduct{}
+	err := s.db.SelectContext(ctx, &products, `
+	SELECT user_id, product_id, name, expire_date FROM fridge
+	JOIN product ON product.id = fridge.product_id
+	WHERE (expire_date = CURRENT_DATE 
+	OR expire_date = CURRENT_DATE + INTERVAL '1 day')
+	AND status IS NULL
+	`)
+	if err != nil {
+		return products, err
+	}
+	return products, nil
 }

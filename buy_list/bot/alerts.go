@@ -11,37 +11,43 @@ import (
 	"go.uber.org/zap"
 )
 
-var sch *gocron.Scheduler
+var schb *gocron.Scheduler //for buy_list alerts
+var schf *gocron.Scheduler // for fridge alerts
 
 func InitScheduler(s *store.Store, bot *tgbotapi.BotAPI) {
-	// location, err := time.LoadLocation("Europe/Moscow")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	sch = gocron.NewScheduler(time.Local)
-
+	schb = gocron.NewScheduler(time.Local)
 	//for restarting bot
-	fStart, err := sch.Every(1).Seconds().Do(CreateBuyAlerts, s, bot)
+	jbStart, err := schb.Every(1).Seconds().Do(CreateBuyAlerts, s, bot)
 	if err != nil {
 		panic(err)
 	}
-	fStart.LimitRunsTo(1)
+	jbStart.LimitRunsTo(1)
 
-	sch.Every(1).Day().At("00:00").Do(CreateBuyAlerts, s, bot)
-	sch.StartAsync()
+	schb.Every(1).Day().At("00:00").Do(CreateBuyAlerts, s, bot)
+	schb.StartAsync()
+
+	schf = gocron.NewScheduler(time.Local)
+	//for restarting bot
+	jfStart, err := schf.Every(1).Seconds().Do(CreateExpireAlerts, s, bot)
+	if err != nil {
+		panic(err)
+	}
+	jfStart.LimitRunsTo(1)
+
+	schf.Every(1).Day().At("08:00;18:00").Do(CreateExpireAlerts, s, bot)
+	schf.StartAsync()
 }
 
 // for adding new products in buy list during current day
 func UpdateBuyListSchedule(s *store.Store, bot *tgbotapi.BotAPI) {
-	sch.Clear()
-	sch.Every(1).Day().At("00:00").Do(CreateBuyAlerts, s, bot)
+	schb.Clear()
+	schb.Every(1).Day().At("00:00").Do(CreateBuyAlerts, s, bot)
 	CreateBuyAlerts(s, bot)
-	sch.StartAsync()
+	schb.StartAsync()
 }
 
 func CreateBuyAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
 	products, err := s.GetTodayBuyList(context.Background())
-	fmt.Println(len(products))
 	if err != nil {
 		logger.Error("Get todays buy list errot", zap.Error(err))
 	}
@@ -58,8 +64,8 @@ func CreateBuyAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
 		}
 
 		text := fmt.Sprintf("Время покупки %s", pr.Name)
-		sch.SingletonMode()
-		job, err := sch.Every(1).Day().At(tm).Do(SendAlert, pr, bot, chatid, text)
+		schb.SingletonMode()
+		job, err := schb.Every(1).Day().At(tm).Do(SendAlert, bot, chatid, text)
 		if err != nil {
 			panic(err)
 		}
@@ -69,11 +75,40 @@ func CreateBuyAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
 		job.LimitRunsTo(1)
 	}
 	logger.Info("alerts created",
-		zap.Int("jobs count", len(sch.Jobs())),
+		zap.Int("jobs count", len(schb.Jobs())),
 	)
 }
 
-func SendAlert(p store.Product, bot *tgbotapi.BotAPI, chat_id int64, text string) {
+func CreateExpireAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
+	products, err := s.GetSoonExpireList(context.Background())
+	if err != nil {
+		logger.Error("Get todays expire list error", zap.Error(err))
+	}
+	for _, pr := range products {
+		tm, err := time.Parse(time.RFC3339, pr.Expire_date)
+		if err != nil {
+			panic(err)
+		}
+
+		chatid, err := s.GetChatIdByUserId(context.Background(), pr.UserId)
+		if err != nil {
+			logger.Error("Get chat id error", zap.Error(err))
+		}
+
+		text := fmt.Sprintf("Скоро истекает срок годности %s %s", pr.Name,
+			tm.Format("2006-01-02"))
+
+		SendAlert(bot, chatid, text)
+	}
+}
+
+func UpdateExpireSchedule(s *store.Store, bot *tgbotapi.BotAPI) {
+	schf.Clear()
+	schf.Every(1).Day().At("08:00;18:00").Do(CreateExpireAlerts, s, bot)
+	schf.StartAsync()
+}
+
+func SendAlert(bot *tgbotapi.BotAPI, chat_id int64, text string) {
 	msg := tgbotapi.NewMessage(chat_id, text)
 	if _, err := bot.Send(msg); err != nil {
 		panic(err)
