@@ -34,11 +34,18 @@ func StartMenu(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *tgbota
 	}
 }
 
+func CancelMenu(msg *tgbotapi.MessageConfig) {
+	GlobalState = StateStart
+	msg.ReplyMarkup = startKeyboard
+	fmt.Println(*msg)
+}
+
 func StartUser(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
 	msg.ReplyMarkup = startKeyboard
 	msg.Text = "Привет! Я бот, который может управлять вашими покупками и мониторить срок годности продуктов."
 	err := s.AddUsertg(ctx, &store.Usertg{
 		Username: update.Message.From.UserName,
+		ChatId:   update.Message.From.ID,
 	})
 	if err != nil {
 		logger.Error("Adding user error", zap.Error(err))
@@ -50,9 +57,7 @@ func AddBuyListMenuu(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *
 }
 
 func AddProduct(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
-
-	p.State = 0
-
+	p.State = StateProduct
 	msg.Text = "Введите название продукта"
 }
 
@@ -78,9 +83,9 @@ func ProductList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.
 	}
 }
 
-func AddingToBuyList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
+func AddingToBuyList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	switch p.State {
-	case 0:
+	case StateProduct:
 		var err error
 		p, err = s.CreateProductByName(ctx, update.Message.Text)
 		if err != nil {
@@ -92,18 +97,18 @@ func AddingToBuyList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *st
 		}
 		p.UserId = ur.UserId
 		msg.Text = "Введите вес/количество"
-		p.State = 1
+		p.State = StateWeight
 
-	case 1:
+	case StateWeight:
 		if _, err := strconv.ParseFloat(update.Message.Text, 64); err != nil {
 			msg.Text = "Неверный формат"
 		} else {
 			p.Weight, _ = strconv.ParseFloat(update.Message.Text, 64)
 			msg.Text = "Введите время покупки (YYYY-MM-DD HH:MM)"
-			p.State = 2
+			p.State = StateBuyDate
 		}
 
-	case 2:
+	case StateBuyDate:
 		ts := update.Message.Text + ":00"
 		if _, err := time.Parse("2006-01-02 15:04:05.999", ts); err != nil {
 			msg.Text = "Неверный формат"
@@ -115,6 +120,7 @@ func AddingToBuyList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *st
 			}
 			msg.Text = "Товар добавлен в список покупок"
 			msg.ReplyMarkup = buylistKeyboard
+			UpdateBuyListSchedule(s, bot)
 		}
 	}
 }
@@ -166,14 +172,14 @@ func AddFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.St
 	if err != nil {
 		logger.Error("Getting user id error", zap.Error(err))
 	}
-	f.State = 0
+	f.State = StateFridgeProduct
 	f.UserId = ur.UserId
 	msg.Text = "Введите название продукта"
 }
 
-func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store) {
+func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	switch f.State {
-	case 0:
+	case StateFridgeProduct:
 		var err error
 		p, err = s.CreateProductByName(ctx, update.Message.Text)
 		if err != nil {
@@ -183,9 +189,9 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 		f.Name = p.Name
 
 		msg.Text = "Укажите срок годности (YYYY-MM-DD)"
-		f.State = 1
+		f.State = StateFridgeDate
 
-	case 1:
+	case StateFridgeDate:
 		ts := update.Message.Text
 		if _, err := time.Parse("2006-01-02", ts); err != nil {
 			msg.Text = "Неверный формат"
@@ -199,7 +205,7 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 			msg.ReplyMarkup = fridgeKeyboard
 		}
 
-	case 2: //for adding from buy list
+	case StateFromBuyList: //for adding from buy list
 		ts := update.Message.Text
 		if _, err := time.Parse("2006-01-02", ts); err != nil {
 			msg.Text = "Неверный формат"
@@ -220,10 +226,11 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *sto
 			msg.Text = "Товар добавлен в холодильник"
 			msg.ReplyMarkup = buylistKeyboard
 			GlobalState = StateAddBuyList
+			UpdateBuyListSchedule(s, bot)
 		}
 
 		//TODO
-	case 3: //for opening product
+	case StateOpen: //for opening product
 		ts := update.Message.Text
 		if _, err := time.Parse("2006-01-02", ts); err != nil {
 			msg.Text = "Неверный формат"
@@ -295,6 +302,7 @@ func DeleteProductFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbo
 	if err != nil {
 		logger.Error("Deleting product from buy list error", zap.Error(err))
 	}
+	UpdateBuyListSchedule(s, bot)
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
 		fmt.Sprintf("Продукт '%s' удален из списка покупок", pname))
 	SendMessage(bot, &msg)
@@ -326,7 +334,7 @@ func OpenProductFromFridge(update *tgbotapi.Update, s *store.Store, bot *tgbotap
 	f.ProductId = p.ProductId
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
 		fmt.Sprintf("Продукт '%s' открыт\nВведите новый срок годности:", pname))
-	f.State = 3
+	f.State = StateOpen
 	SendMessage(bot, &msg)
 }
 
@@ -381,7 +389,7 @@ func AddToFridgeFromBuyList(update *tgbotapi.Update, s *store.Store, bot *tgbota
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID,
 		"Укажите срок годности (YYYY-MM-DD)")
 	SendMessage(bot, &msg)
-	f.State = 2
+	f.State = StateFromBuyList
 }
 
 func GetAllUsedProducts(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI, msg *tgbotapi.MessageConfig) {
@@ -420,7 +428,7 @@ func GetUsedProdcutsList(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.
 		}
 		msg.Text = res
 	} else {
-		msg.Text = "Список покупок пуст"
+		msg.Text = "Нет использованных продуктов"
 
 	}
 	SendMessage(bot, msg)

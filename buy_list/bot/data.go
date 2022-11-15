@@ -91,6 +91,8 @@ const (
 const (
 	StateFridgeProduct int = iota
 	StateFridgeDate
+	StateFromBuyList
+	StateOpen
 )
 
 const (

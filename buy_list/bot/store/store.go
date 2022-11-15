@@ -14,7 +14,7 @@ type Store struct {
 	db   *sqlx.DB
 }
 type Product struct { // 0 - name ; 1 - weight ; 2 - buydate
-	UserId    string
+	UserId    string `db:"user_id"`
 	ProductId string `db:"id"`
 	State     int
 	Name      string  `db:"name"`
@@ -36,6 +36,7 @@ type FridgeProduct struct { // 0 - name ; 1 - expire date
 type Usertg struct {
 	UserId   string `db:"id"`
 	Username string `db:"username"`
+	ChatId   int64  `db:"chat_id"`
 }
 
 type PeriodStat struct {
@@ -44,11 +45,12 @@ type PeriodStat struct {
 	ToDate   string
 }
 
-// type BuyList struct {
+// type BuyListProduct struct {
 // 	UserId    string  `db:"user_id"`
 // 	ProductId string  `db:"product_id"`
 // 	Weight    float64 `db:"weight"`
 // 	BuyTime   string  `db:"buy_time"`
+// 	Name      string  `db:"name"`
 // }
 
 //TODO inteface
@@ -73,9 +75,9 @@ func NewStore(connString string) *Store {
 
 func (s *Store) AddUsertg(ctx context.Context, u *Usertg) error {
 	_, err := s.db.ExecContext(ctx, `
-	INSERT INTO usertg(username)
-	VALUES ($1);
-	`, u.Username)
+	INSERT INTO usertg(username, chat_id)
+	VALUES ($1, $2);
+	`, u.Username, u.ChatId)
 	if err != nil {
 		return err
 	}
@@ -113,7 +115,7 @@ func (s *Store) GetProductByName(ctx context.Context, productName string) (Produ
 	p := Product{}
 	err := s.db.GetContext(ctx, &p, `
 	SELECT id FROM product
-	WHERE name = $1
+	WHERE name = $1;
 	`, productName)
 	if err != nil {
 		return p, err
@@ -125,7 +127,7 @@ func (s *Store) GetProductByName(ctx context.Context, productName string) (Produ
 func (s *Store) DeleteProductFromBuyListById(ctx context.Context, productId string) error {
 	_, err := s.db.ExecContext(ctx, `
 	DELETE FROM buy_list
-	WHERE product_id = $1
+	WHERE product_id = $1;
 	`, productId)
 	if err != nil {
 		return err
@@ -136,7 +138,7 @@ func (s *Store) DeleteProductFromBuyListById(ctx context.Context, productId stri
 func (s *Store) DeleteProductFromFridgeById(ctx context.Context, productId string) error {
 	_, err := s.db.ExecContext(ctx, `
 	DELETE FROM fridge
-	WHERE product_id = $1
+	WHERE product_id = $1;
 	`, productId)
 	if err != nil {
 		return err
@@ -148,7 +150,7 @@ func (s *Store) OpenProductFromFridgeById(ctx context.Context, productId string,
 	_, err := s.db.ExecContext(ctx, `
 	UPDATE fridge 
 	SET opened = true, expire_date = $1
-	WHERE product_id = $2
+	WHERE product_id = $2;
 	`, expDate, productId)
 	if err != nil {
 		return err
@@ -160,7 +162,7 @@ func (s *Store) SetCookedProductFromFridgeById(ctx context.Context, productId st
 	_, err := s.db.ExecContext(ctx, `
 	UPDATE fridge 
 	SET status = 'cooked', use_date = $1
-	WHERE product_id = $2
+	WHERE product_id = $2;
 	`, useDate, productId)
 	if err != nil {
 		return err
@@ -172,7 +174,7 @@ func (s *Store) SetThrownProductFromFridgeById(ctx context.Context, productId st
 	_, err := s.db.ExecContext(ctx, `
 	UPDATE fridge 
 	SET status = 'thrown', use_date = $1
-	WHERE product_id = $2
+	WHERE product_id = $2;
 	`, useDate, productId)
 	if err != nil {
 		return err
@@ -183,7 +185,7 @@ func (s *Store) SetThrownProductFromFridgeById(ctx context.Context, productId st
 func (s *Store) AddProductToBuyList(ctx context.Context, p *Product) error {
 	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO buy_list
-	VALUES($1, $2, $3, $4)
+	VALUES($1, $2, $3, $4);
 	`, p.UserId, p.ProductId, p.Weight, p.BuyDate)
 	if err != nil {
 		return err
@@ -210,7 +212,7 @@ func (s *Store) AddProductToFridge(ctx context.Context, f *FridgeProduct) error 
 	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO fridge
 	VALUES($1, $2,
-	FALSE, $3, NULL, NULL)
+	FALSE, $3, NULL, NULL);
 	`, f.UserId, f.ProductId, f.Expire_date)
 	if err != nil {
 		return err
@@ -225,7 +227,7 @@ func (s *Store) GetFridgeListByUsername(ctx context.Context, username string) ([
 	FROM fridge f
 	JOIN usertg ut ON ut.id = f.user_id
 	JOIN product pd ON pd.id = f.product_id
-	WHERE ut.username = $1 AND f.status IS null
+	WHERE ut.username = $1 AND f.status IS null;
 	`, username)
 	if err != nil {
 		return nil, err
@@ -241,7 +243,7 @@ func (s *Store) GetFridgeListByUsernameAlpha(ctx context.Context, username strin
 	JOIN usertg ut ON ut.id = f.user_id
 	JOIN product pd ON pd.id = f.product_id
 	WHERE ut.username = $1 AND f.status IS null
-	ORDER BY pd.name
+	ORDER BY pd.name;
 	`, username)
 	if err != nil {
 		return nil, err
@@ -258,7 +260,7 @@ func (s *Store) GetFridgeListByUsernameExpDate(ctx context.Context, username str
 	JOIN usertg ut ON ut.id = f.user_id
 	JOIN product pd ON pd.id = f.product_id
 	WHERE ut.username = $1 AND f.status IS null
-	ORDER BY f.expire_date, pd.name
+	ORDER BY f.expire_date, pd.name;
 	`, username)
 	if err != nil {
 		return nil, err
@@ -274,7 +276,7 @@ func (s *Store) GetUsedProductsByUsername(ctx context.Context, username string) 
 	JOIN usertg ut ON ut.id = f.user_id
 	JOIN product pd ON pd.id = f.product_id
 	WHERE ut.username = $1 AND f.status IS NOT null
-	ORDER BY f.use_date
+	ORDER BY f.use_date;
 	`, username)
 	if err != nil {
 		return products, err
@@ -294,7 +296,7 @@ func (s *Store) GetUsedProductsInPeriodByUsername(ctx context.Context,
 		AND f.status IS NOT null
 		AND f.use_date >= $2
 		AND f.use_date <= $3
-	ORDER BY f.use_date
+	ORDER BY f.use_date;
 	`, username, fromDate, toDate)
 	if err != nil {
 		return products, err
@@ -312,7 +314,7 @@ func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context
 	WHERE ut.username = $1
 	AND f.status = 'cooked'
 		AND f.use_date >= $2
-		AND f.use_date <= $3
+		AND f.use_date <= $3;
 	`, username, fromDate, toDate)
 	if err != nil {
 		return -1, err
@@ -330,10 +332,36 @@ func (s *Store) GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context
 	WHERE ut.username = $1
 	AND f.status = 'thrown'
 		AND f.use_date >= $2
-		AND f.use_date <= $3
+		AND f.use_date <= $3;
 	`, username, fromDate, toDate)
 	if err != nil {
 		return -1, err
 	}
 	return cookedCount, nil
+}
+
+func (s *Store) GetTodayBuyList(ctx context.Context) ([]Product, error) {
+	products := []Product{}
+	err := s.db.SelectContext(ctx, &products, `
+	SELECT user_id, id, weight, buy_time, name FROM buy_list
+	JOIN product ON product.id = buy_list.product_id
+	WHERE buy_time::DATE = CURRENT_DATE ;
+	`)
+	if err != nil {
+		return products, err
+	}
+	return products, nil
+}
+
+func (s *Store) GetChatIdByUserId(ctx context.Context, userid string) (int64, error) {
+	var chatid int64
+	err := s.db.GetContext(ctx, &chatid, `
+	SELECT chat_id
+	FROM usertg
+	WHERE id = $1;
+	`, userid)
+	if err != nil {
+		return chatid, err
+	}
+	return chatid, nil
 }

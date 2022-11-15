@@ -4,7 +4,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE usertg (
 	id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (), 
-	username VARCHAR(255) UNIQUE
+	username VARCHAR(255) UNIQUE,
+	chat_id bigint
 );
 
 CREATE TABLE product (

@@ -43,7 +43,7 @@ func StartBot() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	s := GetConn()
+	s := store.NewStore(fmt.Sprintf("postgresql://%s:%s@localhost:5433/?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")))
 
 	GlobalState = StateStart
 
@@ -51,6 +51,8 @@ func StartBot() {
 	f = store.FridgeProduct{}
 	ur = store.Usertg{}
 	ps = store.PeriodStat{}
+
+	InitScheduler(s, bot)
 
 	for update := range updates {
 		if update.Message != nil {
@@ -93,11 +95,10 @@ func StartBot() {
 						continue
 
 					case buylistKeyboard.Keyboard[1][1].Text: //cancel
-						GlobalState = StateStart
-						msg.ReplyMarkup = startKeyboard
+						CancelMenu(&msg)
 
 					default:
-						AddingToBuyList(&msg, &update, s)
+						AddingToBuyList(&msg, &update, s, bot)
 
 					}
 					SendMessage(bot, &msg)
@@ -117,11 +118,10 @@ func StartBot() {
 						continue
 
 					case fridgeKeyboard.Keyboard[3][0].Text: //cancel
-						GlobalState = StateStart
-						msg.ReplyMarkup = startKeyboard
+						CancelMenu(&msg)
 
 					default:
-						AddingToFridge(&msg, &update, s)
+						AddingToFridge(&msg, &update, s, bot)
 
 					}
 					SendMessage(bot, &msg)
@@ -129,22 +129,23 @@ func StartBot() {
 				case StateUsedProducts:
 
 					switch update.Message.Text {
+
 					case usedProductsKeyboard.Keyboard[0][0].Text: // get list of use products
 						GetAllUsedProducts(&update, s, bot, &msg)
+						continue
 
 					case usedProductsKeyboard.Keyboard[1][0].Text:
-						// GlobalState = StateUsedProducts
 						msg.Text = "Введите начальную дату (YYYY-MM-DD)"
 						ps.State = StateFromDate
-						SendMessage(bot, &msg)
+
 					case usedProductsKeyboard.Keyboard[2][0].Text: //cancel
-						GlobalState = StateStart
-						msg.ReplyMarkup = startKeyboard
-						SendMessage(bot, &msg)
+						CancelMenu(&msg)
+
 					default:
 						UsedProductStat(&msg, &update, s, bot)
 
 					}
+					SendMessage(bot, &msg)
 
 				}
 
@@ -179,9 +180,4 @@ func StartBot() {
 			}
 		}
 	}
-}
-
-func GetConn() *store.Store {
-	s := fmt.Sprintf("postgresql://%s:%s@localhost:5433/?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password"))
-	return store.NewStore(s)
 }
