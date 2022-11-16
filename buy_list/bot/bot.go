@@ -30,12 +30,11 @@ func StartBot() {
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
 	if err != nil {
 		logger.Panic("Invalid token", zap.Error(err))
-		// log.Panic(err)
 	}
 
 	bot.Debug = true
 
-	// logger.Info(fmt.Sprintf("Authorized on account %s", bot.Self.UserName))
+	logger.Info("Authorized on account", zap.String("name", bot.Self.UserName))
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
@@ -58,9 +57,6 @@ func StartBot() {
 		if update.Message != nil {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
 
-			//log
-			//log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
 			if update.Message.IsCommand() {
 				msg.ReplyToMessageID = update.Message.MessageID
 				switch update.Message.Command() {
@@ -74,8 +70,6 @@ func StartBot() {
 				SendMessage(bot, &msg)
 
 			} else {
-				//reply
-				//msg.ReplyToMessageID = update.Message.MessageID
 
 				switch GlobalState {
 
@@ -154,26 +148,7 @@ func StartBot() {
 		} else if update.CallbackQuery != nil {
 			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 
-			switch update.CallbackQuery.Data {
-
-			case "deleteProductFromBuyList":
-				DeleteProductFromBuyList(&update, s, bot)
-
-			case "addToFridgeFromBuyList":
-				AddToFridgeFromBuyList(&update, s, bot)
-
-			case "deleteProductFromFridge":
-				DeleteProductFromFridge(&update, s, bot)
-
-			case "openProductFromFridge":
-				OpenProductFromFridge(&update, s, bot)
-
-			case "setProductCooked":
-				SetProductCookedFromFridge(&update, s, bot)
-
-			case "setProductThrown":
-				SetProductThrownFromFridge(&update, s, bot)
-			}
+			HandleCallbacks(&update, s, bot)
 
 			if _, err := bot.Request(callback); err != nil {
 				logger.Panic(err.Error())

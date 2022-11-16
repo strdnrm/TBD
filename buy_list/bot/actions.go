@@ -83,6 +83,29 @@ func ProductList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.
 	}
 }
 
+func HandleCallbacks(update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
+	switch update.CallbackQuery.Data {
+
+	case "deleteProductFromBuyList":
+		DeleteProductFromBuyList(update, s, bot)
+
+	case "addToFridgeFromBuyList":
+		AddToFridgeFromBuyList(update, s, bot)
+
+	case "deleteProductFromFridge":
+		DeleteProductFromFridge(update, s, bot)
+
+	case "openProductFromFridge":
+		OpenProductFromFridge(update, s, bot)
+
+	case "setProductCooked":
+		SetProductCookedFromFridge(update, s, bot)
+
+	case "setProductThrown":
+		SetProductThrownFromFridge(update, s, bot)
+	}
+}
+
 func AddingToBuyList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, s *store.Store, bot *tgbotapi.BotAPI) {
 	switch p.State {
 	case StateProduct:

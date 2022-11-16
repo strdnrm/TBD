@@ -4,14 +4,12 @@ import (
 	"context"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgx/v4"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 type Store struct {
-	conn *pgx.Conn
-	db   *sqlx.DB
+	db *sqlx.DB
 }
 type Product struct { // 0 - name ; 1 - weight ; 2 - buydate
 	UserId    string `db:"user_id"`
@@ -48,11 +46,6 @@ type PeriodStat struct {
 //TODO inteface
 
 func NewStore(connString string) *Store {
-	conn, err := pgx.Connect(context.Background(), connString)
-	if err != nil {
-		panic(err)
-	}
-
 	db, err := sqlx.Connect("postgres", connString)
 	if err != nil {
 		panic(err)
@@ -60,8 +53,7 @@ func NewStore(connString string) *Store {
 	// defer db.Close()
 
 	return &Store{
-		conn: conn,
-		db:   db,
+		db: db,
 	}
 }
 
@@ -92,8 +84,21 @@ func (s *Store) CreateProductByName(ctx context.Context, productName string) (Pr
 	p := Product{}
 
 	err := s.db.GetContext(ctx, &p, `
-	INSERT INTO product(name)
-	VALUES($1) RETURNING id::text;
+	WITH s AS (
+		SELECT id, name
+		FROM product
+		WHERE name = $1
+	), i AS (
+		INSERT INTO product(name)
+		SELECT $1
+		WHERE NOT EXISTS (SELECT 1 FROM s)
+		RETURNING id
+	)
+	SELECT id
+	FROM i
+	UNION ALL
+	SELECT id
+	FROM s
 	`, productName)
 	p.Name = productName
 	if err != nil {
