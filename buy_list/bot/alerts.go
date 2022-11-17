@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"buy_list/bot/store"
 	"context"
 	"fmt"
 	"time"
@@ -14,40 +13,40 @@ import (
 var schb *gocron.Scheduler //for buy_list alerts
 var schf *gocron.Scheduler // for fridge alerts
 
-func InitScheduler(s *store.Store, bot *tgbotapi.BotAPI) {
+func InitScheduler(bot *Bot) {
 	schb = gocron.NewScheduler(time.Local)
 	//for restarting bot
-	jbStart, err := schb.Every(1).Seconds().Do(CreateBuyAlerts, s, bot)
+	jbStart, err := schb.Every(1).Seconds().Do(CreateBuyAlerts, bot)
 	if err != nil {
 		panic(err)
 	}
 	jbStart.LimitRunsTo(1)
 
-	schb.Every(1).Day().At("00:00").Do(CreateBuyAlerts, s, bot)
+	schb.Every(1).Day().At("00:00").Do(CreateBuyAlerts, bot)
 	schb.StartAsync()
 
 	schf = gocron.NewScheduler(time.Local)
 	//for restarting bot
-	jfStart, err := schf.Every(1).Seconds().Do(CreateExpireAlerts, s, bot)
+	jfStart, err := schf.Every(1).Seconds().Do(CreateExpireAlerts, bot)
 	if err != nil {
 		panic(err)
 	}
 	jfStart.LimitRunsTo(1)
 
-	schf.Every(1).Day().At("08:00;18:00").Do(CreateExpireAlerts, s, bot)
+	schf.Every(1).Day().At("08:00;18:00").Do(CreateExpireAlerts, bot)
 	schf.StartAsync()
 }
 
 // for adding new products in buy list during current day
-func UpdateBuyListSchedule(s *store.Store, bot *tgbotapi.BotAPI) {
+func UpdateBuyListSchedule(bot *Bot) {
 	schb.Clear()
-	schb.Every(1).Day().At("00:00").Do(CreateBuyAlerts, s, bot)
-	CreateBuyAlerts(s, bot)
+	schb.Every(1).Day().At("00:00").Do(CreateBuyAlerts, bot.s, bot)
+	CreateBuyAlerts(bot)
 	schb.StartAsync()
 }
 
-func CreateBuyAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
-	products, err := s.GetTodayBuyList(context.Background())
+func CreateBuyAlerts(bot *Bot) {
+	products, err := bot.s.GetTodayBuyList(context.Background())
 	if err != nil {
 		logger.Error("Get todays buy list errot", zap.Error(err))
 	}
@@ -58,7 +57,7 @@ func CreateBuyAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
 			panic(err)
 		}
 
-		chatid, err := s.GetChatIdByUserId(context.Background(), pr.UserId)
+		chatid, err := bot.s.GetChatIdByUserId(context.Background(), pr.UserId)
 		if err != nil {
 			logger.Error("Get chat id error", zap.Error(err))
 		}
@@ -79,8 +78,8 @@ func CreateBuyAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
 	)
 }
 
-func CreateExpireAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
-	products, err := s.GetSoonExpireList(context.Background())
+func CreateExpireAlerts(bot *Bot) {
+	products, err := bot.s.GetSoonExpireList(context.Background())
 	if err != nil {
 		logger.Error("Get todays expire list error", zap.Error(err))
 	}
@@ -90,7 +89,7 @@ func CreateExpireAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
 			panic(err)
 		}
 
-		chatid, err := s.GetChatIdByUserId(context.Background(), pr.UserId)
+		chatid, err := bot.s.GetChatIdByUserId(context.Background(), pr.UserId)
 		if err != nil {
 			logger.Error("Get chat id error", zap.Error(err))
 		}
@@ -102,15 +101,15 @@ func CreateExpireAlerts(s *store.Store, bot *tgbotapi.BotAPI) {
 	}
 }
 
-func UpdateExpireSchedule(s *store.Store, bot *tgbotapi.BotAPI) {
+func UpdateExpireSchedule(bot *Bot) {
 	schf.Clear()
-	schf.Every(1).Day().At("08:00;18:00").Do(CreateExpireAlerts, s, bot)
+	schf.Every(1).Day().At("08:00;18:00").Do(CreateExpireAlerts, bot)
 	schf.StartAsync()
 }
 
-func SendAlert(bot *tgbotapi.BotAPI, chat_id int64, text string) {
+func SendAlert(bot *Bot, chat_id int64, text string) {
 	msg := tgbotapi.NewMessage(chat_id, text)
-	if _, err := bot.Send(msg); err != nil {
+	if _, err := bot.BotAPI.Send(msg); err != nil {
 		panic(err)
 	}
 }

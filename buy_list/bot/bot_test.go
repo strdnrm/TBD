@@ -1,27 +1,46 @@
 package bot
 
-import "testing"
+import (
+	"os"
+	"testing"
 
-func TestDig(t *testing.T) {
-	p := New()
-	expected := Creature{
-		BurrowLength: p.BurrowLength + 5,
-		Health:       p.Health - 30,
-		Respect:      p.Respect,
-		Weight:       p.Weight,
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
+
+const (
+	ChatID = 1019642784
+)
+
+func TestBotCreate(t *testing.T) {
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
+	bot.Debug = true
+
+	if err != nil {
+		t.Error(err)
 	}
-	p.Dig("intensively")
-	if p != expected {
-		t.Error("Incorrect parameter change")
+}
+
+func TestGetUpdate(t *testing.T) {
+	bot, _ := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
+	bot.Debug = true
+
+	u := tgbotapi.NewUpdate(0)
+
+	_, err := bot.GetUpdates(u)
+
+	if err != nil {
+		t.Error(err)
 	}
-	expected = Creature{
-		BurrowLength: p.BurrowLength + 2,
-		Health:       p.Health - 10,
-		Respect:      p.Respect,
-		Weight:       p.Weight,
-	}
-	p.Dig("lazily")
-	if p != expected {
-		t.Error("Incorrect parameter change")
+}
+
+func TestSendWithMessage(t *testing.T) {
+	bot, _ := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
+	bot.Debug = true
+
+	msg := tgbotapi.NewMessage(ChatID, "Test send message")
+	_, err := bot.Send(msg)
+
+	if err != nil {
+		t.Error(err)
 	}
 }

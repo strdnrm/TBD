@@ -1,8 +1,11 @@
 package store
 
 import (
+	"buy_list/bot/models"
 	"context"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -10,37 +13,6 @@ import (
 
 type Store struct {
 	db *sqlx.DB
-}
-type Product struct { // 0 - name ; 1 - weight ; 2 - buydate
-	UserId    string `db:"user_id"`
-	ProductId string `db:"id"`
-	State     int
-	Name      string  `db:"name"`
-	Weight    float64 `db:"weight"`
-	BuyDate   string  `db:"buy_time"`
-}
-
-type FridgeProduct struct { // 0 - name ; 1 - expire date
-	UserId      string `db:"user_id"`
-	ProductId   string `db:"product_id"`
-	State       int
-	Name        string `db:"name"`
-	Opened      bool   `db:"opened"`
-	Expire_date string `db:"expire_date"`
-	Status      string `db:"status"`
-	Use_date    string `db:"use_date"`
-}
-
-type Usertg struct {
-	UserId   string `db:"id"`
-	Username string `db:"username"`
-	ChatId   int64  `db:"chat_id"`
-}
-
-type PeriodStat struct {
-	State    int
-	FromDate string
-	ToDate   string
 }
 
 //TODO inteface
@@ -50,14 +22,26 @@ func NewStore(connString string) *Store {
 	if err != nil {
 		panic(err)
 	}
-	// defer db.Close()
+
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	if err != nil {
+		panic(err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file:./migrations/",
+		"postgres", driver)
+	if err != nil {
+		panic(err)
+	}
+	m.Up()
 
 	return &Store{
 		db: db,
 	}
 }
 
-func (s *Store) AddUsertg(ctx context.Context, u *Usertg) error {
+func (s *Store) AddUsertg(ctx context.Context, u *models.Usertg) error {
 	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO usertg(username, chat_id)
 	VALUES ($1, $2);
@@ -68,8 +52,8 @@ func (s *Store) AddUsertg(ctx context.Context, u *Usertg) error {
 	return nil
 }
 
-func (s *Store) GetUserByUsername(ctx context.Context, username string) (Usertg, error) {
-	u := Usertg{}
+func (s *Store) GetUserByUsername(ctx context.Context, username string) (models.Usertg, error) {
+	u := models.Usertg{}
 	err := s.db.GetContext(ctx, &u, `
 	SELECT id::text FROM usertg WHERE username = $1;
 	`, username)
@@ -79,9 +63,9 @@ func (s *Store) GetUserByUsername(ctx context.Context, username string) (Usertg,
 	return u, nil
 }
 
-// problem with the same product name
-func (s *Store) CreateProductByName(ctx context.Context, productName string) (Product, error) {
-	p := Product{}
+// returns id if the product exists otherwise creates it
+func (s *Store) CreateProductByName(ctx context.Context, productName string) (models.Product, error) {
+	p := models.Product{}
 
 	err := s.db.GetContext(ctx, &p, `
 	WITH s AS (
@@ -108,8 +92,8 @@ func (s *Store) CreateProductByName(ctx context.Context, productName string) (Pr
 	return p, nil
 }
 
-func (s *Store) GetProductByName(ctx context.Context, productName string) (Product, error) {
-	p := Product{}
+func (s *Store) GetProductByName(ctx context.Context, productName string) (models.Product, error) {
+	p := models.Product{}
 	err := s.db.GetContext(ctx, &p, `
 	SELECT id FROM product
 	WHERE name = $1;
@@ -179,7 +163,7 @@ func (s *Store) SetThrownProductFromFridgeById(ctx context.Context, productId st
 	return nil
 }
 
-func (s *Store) AddProductToBuyList(ctx context.Context, p *Product) error {
+func (s *Store) AddProductToBuyList(ctx context.Context, p *models.Product) error {
 	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO buy_list
 	VALUES($1, $2, $3, $4);
@@ -190,9 +174,9 @@ func (s *Store) AddProductToBuyList(ctx context.Context, p *Product) error {
 	return nil
 }
 
-func (s *Store) GetBuyListByUsername(ctx context.Context, username string) ([]Product, error) {
+func (s *Store) GetBuyListByUsername(ctx context.Context, username string) ([]models.Product, error) {
 	// get name wight buydate
-	var list []Product
+	var list []models.Product
 	err := s.db.SelectContext(ctx, &list, `
 	SELECT product.name, buy_list.weight, buy_list.buy_time FROM buy_list
 	JOIN product ON product.id = buy_list.product_id
@@ -205,7 +189,7 @@ func (s *Store) GetBuyListByUsername(ctx context.Context, username string) ([]Pr
 	return list, nil
 }
 
-func (s *Store) AddProductToFridge(ctx context.Context, f *FridgeProduct) error {
+func (s *Store) AddProductToFridge(ctx context.Context, f *models.FridgeProduct) error {
 	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO fridge
 	VALUES($1, $2,
@@ -217,8 +201,8 @@ func (s *Store) AddProductToFridge(ctx context.Context, f *FridgeProduct) error 
 	return nil
 }
 
-func (s *Store) GetFridgeListByUsername(ctx context.Context, username string) ([]FridgeProduct, error) {
-	var list []FridgeProduct
+func (s *Store) GetFridgeListByUsername(ctx context.Context, username string) ([]models.FridgeProduct, error) {
+	var list []models.FridgeProduct
 	err := s.db.SelectContext(ctx, &list, `
 	SELECT pd.name, f.opened, f.expire_date
 	FROM fridge f
@@ -232,8 +216,8 @@ func (s *Store) GetFridgeListByUsername(ctx context.Context, username string) ([
 	return list, nil
 }
 
-func (s *Store) GetFridgeListByUsernameAlpha(ctx context.Context, username string) ([]FridgeProduct, error) {
-	var list []FridgeProduct
+func (s *Store) GetFridgeListByUsernameAlpha(ctx context.Context, username string) ([]models.FridgeProduct, error) {
+	var list []models.FridgeProduct
 	err := s.db.SelectContext(ctx, &list, `
 	SELECT pd.name, f.opened, f.expire_date
 	FROM fridge f
@@ -248,9 +232,9 @@ func (s *Store) GetFridgeListByUsernameAlpha(ctx context.Context, username strin
 	return list, nil
 }
 
-func (s *Store) GetFridgeListByUsernameExpDate(ctx context.Context, username string) ([]FridgeProduct, error) {
+func (s *Store) GetFridgeListByUsernameExpDate(ctx context.Context, username string) ([]models.FridgeProduct, error) {
 	//get name opened expire_date  status
-	var list []FridgeProduct
+	var list []models.FridgeProduct
 	err := s.db.SelectContext(ctx, &list, `
 	SELECT pd.name, f.opened, f.expire_date
 	FROM fridge f
@@ -265,8 +249,8 @@ func (s *Store) GetFridgeListByUsernameExpDate(ctx context.Context, username str
 	return list, nil
 }
 
-func (s *Store) GetUsedProductsByUsername(ctx context.Context, username string) ([]FridgeProduct, error) {
-	products := []FridgeProduct{}
+func (s *Store) GetUsedProductsByUsername(ctx context.Context, username string) ([]models.FridgeProduct, error) {
+	products := []models.FridgeProduct{}
 	err := s.db.SelectContext(ctx, &products, `
 	SELECT pd.name, f.status, f.use_date
 	FROM fridge f
@@ -282,8 +266,8 @@ func (s *Store) GetUsedProductsByUsername(ctx context.Context, username string) 
 }
 
 func (s *Store) GetUsedProductsInPeriodByUsername(ctx context.Context,
-	username string, fromDate string, toDate string) ([]FridgeProduct, error) {
-	products := []FridgeProduct{}
+	username string, period models.PeriodStat) ([]models.FridgeProduct, error) {
+	products := []models.FridgeProduct{}
 	err := s.db.SelectContext(ctx, &products, `
 	SELECT pd.name, f.status, f.use_date
 	FROM fridge f
@@ -294,7 +278,7 @@ func (s *Store) GetUsedProductsInPeriodByUsername(ctx context.Context,
 		AND f.use_date >= $2
 		AND f.use_date <= $3
 	ORDER BY f.use_date;
-	`, username, fromDate, toDate)
+	`, username, period.FromDate, period.ToDate)
 	if err != nil {
 		return products, err
 	}
@@ -302,7 +286,7 @@ func (s *Store) GetUsedProductsInPeriodByUsername(ctx context.Context,
 }
 
 func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context,
-	username string, fromDate string, toDate string) (int, error) {
+	username string, period models.PeriodStat) (int, error) {
 	var cookedCount int
 	err := s.db.GetContext(ctx, &cookedCount, `
 	SELECT COUNT(*)
@@ -312,7 +296,7 @@ func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context
 	AND f.status = 'cooked'
 		AND f.use_date >= $2
 		AND f.use_date <= $3;
-	`, username, fromDate, toDate)
+	`, username, period.FromDate, period.ToDate)
 	if err != nil {
 		return -1, err
 	}
@@ -320,7 +304,7 @@ func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context
 }
 
 func (s *Store) GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context,
-	username string, fromDate string, toDate string) (int, error) {
+	username string, period models.PeriodStat) (int, error) {
 	var cookedCount int
 	err := s.db.GetContext(ctx, &cookedCount, `
 	SELECT COUNT(*)
@@ -330,15 +314,15 @@ func (s *Store) GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context
 	AND f.status = 'thrown'
 		AND f.use_date >= $2
 		AND f.use_date <= $3;
-	`, username, fromDate, toDate)
+	`, username, period.FromDate, period.ToDate)
 	if err != nil {
 		return -1, err
 	}
 	return cookedCount, nil
 }
 
-func (s *Store) GetTodayBuyList(ctx context.Context) ([]Product, error) {
-	products := []Product{}
+func (s *Store) GetTodayBuyList(ctx context.Context) ([]models.Product, error) {
+	products := []models.Product{}
 	err := s.db.SelectContext(ctx, &products, `
 	SELECT user_id, id, weight, buy_time, name FROM buy_list
 	JOIN product ON product.id = buy_list.product_id
@@ -363,8 +347,8 @@ func (s *Store) GetChatIdByUserId(ctx context.Context, userid string) (int64, er
 	return chatid, nil
 }
 
-func (s *Store) GetSoonExpireList(ctx context.Context) ([]FridgeProduct, error) {
-	products := []FridgeProduct{}
+func (s *Store) GetSoonExpireList(ctx context.Context) ([]models.FridgeProduct, error) {
+	products := []models.FridgeProduct{}
 	err := s.db.SelectContext(ctx, &products, `
 	SELECT user_id, product_id, name, expire_date FROM fridge
 	JOIN product ON product.id = fridge.product_id

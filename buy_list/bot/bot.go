@@ -1,25 +1,74 @@
 package bot
 
 import (
+	"buy_list/bot/models"
 	"buy_list/bot/store"
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"go.uber.org/zap"
 )
 
+type Storer interface {
+	AddUsertg(ctx context.Context, u *models.Usertg) error
+	GetUserByUsername(ctx context.Context, username string) (models.Usertg, error)
+	CreateProductByName(ctx context.Context, productName string) (models.Product, error)
+	GetProductByName(ctx context.Context, productName string) (models.Product, error)
+	DeleteProductFromBuyListById(ctx context.Context, productId string) error
+	DeleteProductFromFridgeById(ctx context.Context, productId string) error
+	OpenProductFromFridgeById(ctx context.Context, productId string, expDate string) error
+	SetCookedProductFromFridgeById(ctx context.Context, productId string, useDate string) error
+	SetThrownProductFromFridgeById(ctx context.Context, productId string, useDate string) error
+	AddProductToBuyList(ctx context.Context, p *models.Product) error
+	GetBuyListByUsername(ctx context.Context, username string) ([]models.Product, error)
+	AddProductToFridge(ctx context.Context, f *models.FridgeProduct) error
+	GetFridgeListByUsername(ctx context.Context, username string) ([]models.FridgeProduct, error)
+	GetFridgeListByUsernameAlpha(ctx context.Context, username string) ([]models.FridgeProduct, error)
+	GetFridgeListByUsernameExpDate(ctx context.Context, username string) ([]models.FridgeProduct, error)
+	GetUsedProductsByUsername(ctx context.Context, username string) ([]models.FridgeProduct, error)
+	GetUsedProductsInPeriodByUsername(ctx context.Context,
+		username string, period models.PeriodStat) ([]models.FridgeProduct, error)
+	GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context,
+		username string, period models.PeriodStat) (int, error)
+	GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context,
+		username string, period models.PeriodStat) (int, error)
+	GetTodayBuyList(ctx context.Context) ([]models.Product, error)
+	GetChatIdByUserId(ctx context.Context, userid string) (int64, error)
+	GetSoonExpireList(ctx context.Context) ([]models.FridgeProduct, error)
+}
+
+type Bot struct {
+	BotAPI *tgbotapi.BotAPI
+	s      Storer
+}
+
 var (
-	p           store.Product
-	f           store.FridgeProduct
-	ur          store.Usertg
-	ps          store.PeriodStat
+	p           models.Product
+	f           models.FridgeProduct
+	ur          models.Usertg
+	ps          models.PeriodStat
 	GlobalState int
 	logger      *zap.Logger
 	ctx         context.Context
 )
+
+func newBot() Bot {
+	logger = zap.NewExample()
+
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
+	if err != nil {
+		logger.Panic("Invalid token", zap.Error(err))
+	}
+
+	store := store.NewStore(fmt.Sprintf("postgresql://%s:%s@localhost:5433/?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")))
+
+	return Bot{
+		BotAPI: bot,
+		s:      store,
+	}
+}
 
 func StartBot() {
 	logger = zap.NewExample()
@@ -27,31 +76,32 @@ func StartBot() {
 
 	ctx = context.Background()
 
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
-	if err != nil {
-		logger.Panic("Invalid token", zap.Error(err))
-	}
+	bot := newBot()
 
-	bot.Debug = true
+	// bot, err := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
+	// if err != nil {
+	// 	logger.Panic("Invalid token", zap.Error(err))
+	// }
 
-	logger.Info("Authorized on account", zap.String("name", bot.Self.UserName))
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	bot.BotAPI.Debug = true
+
+	logger.Info("Authorized on account", zap.String("name", bot.BotAPI.Self.UserName))
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	updates := bot.GetUpdatesChan(u)
+	updates := bot.BotAPI.GetUpdatesChan(u)
 
-	s := store.NewStore(fmt.Sprintf("postgresql://%s:%s@localhost:5433/?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")))
+	// s := store.NewStore(fmt.Sprintf("postgresql://%s:%s@localhost:5433/?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")))
 
 	GlobalState = StateStart
 
-	p = store.Product{}
-	f = store.FridgeProduct{}
-	ur = store.Usertg{}
-	ps = store.PeriodStat{}
+	p = models.Product{}
+	f = models.FridgeProduct{}
+	ur = models.Usertg{}
+	ps = models.PeriodStat{}
 
-	InitScheduler(s, bot)
+	InitScheduler(&bot)
 
 	for update := range updates {
 		if update.Message != nil {
@@ -61,13 +111,13 @@ func StartBot() {
 				msg.ReplyToMessageID = update.Message.MessageID
 				switch update.Message.Command() {
 				case "start":
-					StartUser(&msg, &update, s)
+					StartUser(&msg, &update, &bot)
 				case "cancel":
 					GlobalState = StateStart
 				default:
 					msg.Text = "Неверная команда :("
 				}
-				SendMessage(bot, &msg)
+				SendMessage(&bot, &msg)
 
 			} else {
 
@@ -75,57 +125,57 @@ func StartBot() {
 
 				//start menu
 				case StateStart:
-					StartMenu(&msg, &update, bot)
+					StartMenu(&msg, &update, &bot)
 
 				//adding to buy list
 				case StateAddBuyList:
 					switch update.Message.Text {
 
 					case buylistKeyboard.Keyboard[0][0].Text: //add product
-						AddProduct(&msg, &update, s)
+						AddProduct(&msg, &update)
 
 					case buylistKeyboard.Keyboard[1][0].Text: //get buy list
-						ProductList(&msg, &update, s, bot)
+						ProductList(&msg, &update, &bot)
 						continue
 
 					case buylistKeyboard.Keyboard[1][1].Text: //cancel
 						CancelMenu(&msg)
 
 					default:
-						AddingToBuyList(&msg, &update, s, bot)
+						AddingToBuyList(&msg, &update, &bot)
 
 					}
-					SendMessage(bot, &msg)
+					SendMessage(&bot, &msg)
 
 				case StateAddFridge:
 					switch update.Message.Text {
 
 					case fridgeKeyboard.Keyboard[0][0].Text: //add product
-						AddFridge(&msg, &update, s)
+						AddFridge(&msg, &update, &bot)
 
 					case fridgeKeyboard.Keyboard[1][0].Text: //get fridge list by alpha
-						GetFridgeListByUsernameAlphaMenu(&update, s, bot, &msg)
+						GetFridgeListByUsernameAlphaMenu(&update, &bot, &msg)
 						continue
 
 					case fridgeKeyboard.Keyboard[2][0].Text: //get fridge list by exp date
-						GetFridgeListByUsernameExpDateMenu(&update, s, bot, &msg)
+						GetFridgeListByUsernameExpDateMenu(&update, &bot, &msg)
 						continue
 
 					case fridgeKeyboard.Keyboard[3][0].Text: //cancel
 						CancelMenu(&msg)
 
 					default:
-						AddingToFridge(&msg, &update, s, bot)
+						AddingToFridge(&msg, &update, &bot)
 
 					}
-					SendMessage(bot, &msg)
+					SendMessage(&bot, &msg)
 
 				case StateUsedProducts:
 
 					switch update.Message.Text {
 
 					case usedProductsKeyboard.Keyboard[0][0].Text: // get list of use products
-						GetAllUsedProducts(&update, s, bot, &msg)
+						GetAllUsedProducts(&update, &bot, &msg)
 						continue
 
 					case usedProductsKeyboard.Keyboard[1][0].Text:
@@ -136,10 +186,10 @@ func StartBot() {
 						CancelMenu(&msg)
 
 					default:
-						UsedProductStat(&msg, &update, s, bot)
+						UsedProductStat(&msg, &update, &bot)
 
 					}
-					SendMessage(bot, &msg)
+					SendMessage(&bot, &msg)
 
 				}
 
@@ -148,9 +198,9 @@ func StartBot() {
 		} else if update.CallbackQuery != nil {
 			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 
-			HandleCallbacks(&update, s, bot)
+			HandleCallbacks(&update, &bot)
 
-			if _, err := bot.Request(callback); err != nil {
+			if _, err := bot.BotAPI.Request(callback); err != nil {
 				logger.Panic(err.Error())
 			}
 		}
