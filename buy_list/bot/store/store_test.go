@@ -1,28 +1,31 @@
 package store
 
 import (
-	"reflect"
+	"buy_list/bot/models"
+	"context"
 	"testing"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 )
 
-func TestNewStore(t *testing.T) {
+func TestAddUsertg(t *testing.T) {
 	type args struct {
-		connString string
+		ctx context.Context
+		u   *models.Usertg
 	}
 	tests := []struct {
-		name string
-		args args
-		want *Store
+		name    string
+		s       *Store
+		args    args
+		wantErr bool
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewStore(tt.args.connString); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewStore() = %v, want %v", got, tt.want)
+			if err := tt.s.AddUsertg(tt.args.ctx, tt.args.u); (err != nil) != tt.wantErr {
+				t.Errorf("Store.AddUsertg() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

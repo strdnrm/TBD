@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate moq -out store_moq_test.go . Storer
 type Storer interface {
 	AddUsertg(ctx context.Context, u *models.Usertg) error
 	GetUserByUsername(ctx context.Context, username string) (models.Usertg, error)
@@ -38,7 +39,6 @@ type Storer interface {
 	GetChatIdByUserId(ctx context.Context, userid string) (int64, error)
 	GetSoonExpireList(ctx context.Context) ([]models.FridgeProduct, error)
 }
-
 type Bot struct {
 	BotAPI *tgbotapi.BotAPI
 	s      Storer
@@ -78,11 +78,6 @@ func StartBot() {
 
 	bot := newBot()
 
-	// bot, err := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
-	// if err != nil {
-	// 	logger.Panic("Invalid token", zap.Error(err))
-	// }
-
 	bot.BotAPI.Debug = true
 
 	logger.Info("Authorized on account", zap.String("name", bot.BotAPI.Self.UserName))
@@ -91,8 +86,6 @@ func StartBot() {
 	u.Timeout = 60
 
 	updates := bot.BotAPI.GetUpdatesChan(u)
-
-	// s := store.NewStore(fmt.Sprintf("postgresql://%s:%s@localhost:5433/?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")))
 
 	GlobalState = StateStart
 
@@ -104,45 +97,35 @@ func StartBot() {
 	InitScheduler(&bot)
 
 	for update := range updates {
+
 		if update.Message != nil {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-
 			if update.Message.IsCommand() {
-				msg.ReplyToMessageID = update.Message.MessageID
-				switch update.Message.Command() {
-				case "start":
-					StartUser(&msg, &update, &bot)
-				case "cancel":
-					GlobalState = StateStart
-				default:
-					msg.Text = "Неверная команда :("
-				}
-				SendMessage(&bot, &msg)
-
+				HandleCommands(&update, &bot, &msg)
 			} else {
 
 				switch GlobalState {
 
 				//start menu
 				case StateStart:
-					StartMenu(&msg, &update, &bot)
+					StartMenu(&update, &bot, &msg)
 
 				//adding to buy list
 				case StateAddBuyList:
 					switch update.Message.Text {
 
 					case buylistKeyboard.Keyboard[0][0].Text: //add product
-						AddProduct(&msg, &update)
+						AddProduct(&update, &msg)
 
 					case buylistKeyboard.Keyboard[1][0].Text: //get buy list
-						ProductList(&msg, &update, &bot)
+						ProductList(&update, &bot, &msg)
 						continue
 
 					case buylistKeyboard.Keyboard[1][1].Text: //cancel
 						CancelMenu(&msg)
 
 					default:
-						AddingToBuyList(&msg, &update, &bot)
+						AddingToBuyList(&update, &bot, &msg)
 
 					}
 					SendMessage(&bot, &msg)
@@ -151,7 +134,7 @@ func StartBot() {
 					switch update.Message.Text {
 
 					case fridgeKeyboard.Keyboard[0][0].Text: //add product
-						AddFridge(&msg, &update, &bot)
+						AddFridge(&update, &bot, &msg)
 
 					case fridgeKeyboard.Keyboard[1][0].Text: //get fridge list by alpha
 						GetFridgeListByUsernameAlphaMenu(&update, &bot, &msg)
@@ -165,31 +148,14 @@ func StartBot() {
 						CancelMenu(&msg)
 
 					default:
-						AddingToFridge(&msg, &update, &bot)
+						AddingToFridge(&update, &bot, &msg)
 
 					}
 					SendMessage(&bot, &msg)
 
 				case StateUsedProducts:
 
-					switch update.Message.Text {
-
-					case usedProductsKeyboard.Keyboard[0][0].Text: // get list of use products
-						GetAllUsedProducts(&update, &bot, &msg)
-						continue
-
-					case usedProductsKeyboard.Keyboard[1][0].Text:
-						msg.Text = "Введите начальную дату (YYYY-MM-DD)"
-						ps.State = StateFromDate
-
-					case usedProductsKeyboard.Keyboard[2][0].Text: //cancel
-						CancelMenu(&msg)
-
-					default:
-						UsedProductStat(&msg, &update, &bot)
-
-					}
-					SendMessage(&bot, &msg)
+					HandleStateUserProducts(&update, &bot, &msg)
 
 				}
 

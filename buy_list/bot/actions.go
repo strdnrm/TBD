@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func StartMenu(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
+func StartMenu(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
 	switch update.Message.Text {
 	case startKeyboard.Keyboard[0][0].Text:
 		GlobalState = StateAddBuyList
@@ -34,10 +34,41 @@ func StartMenu(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
 	}
 }
 
+func HandleCommands(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
+	msg.ReplyToMessageID = update.Message.MessageID
+	switch update.Message.Command() {
+	case "start":
+		StartUser(msg, update, bot)
+	case "cancel":
+		GlobalState = StateStart
+	default:
+		msg.Text = "Неверная команда :("
+	}
+	SendMessage(bot, msg)
+}
+
+func HandleStateUserProducts(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
+	switch update.Message.Text {
+
+	case usedProductsKeyboard.Keyboard[0][0].Text: // get list of use products
+		GetAllUsedProducts(update, bot, msg)
+
+	case usedProductsKeyboard.Keyboard[1][0].Text:
+		GetToDate(msg)
+
+	case usedProductsKeyboard.Keyboard[2][0].Text: //cancel
+		CancelMenu(msg)
+
+	default:
+		UsedProductStat(msg, update, bot)
+
+	}
+	SendMessage(bot, msg)
+}
+
 func CancelMenu(msg *tgbotapi.MessageConfig) {
 	GlobalState = StateStart
 	msg.ReplyMarkup = startKeyboard
-	fmt.Println(*msg)
 }
 
 func StartUser(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
@@ -52,12 +83,12 @@ func StartUser(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
 	}
 }
 
-func AddProduct(msg *tgbotapi.MessageConfig, update *tgbotapi.Update) {
+func AddProduct(update *tgbotapi.Update, msg *tgbotapi.MessageConfig) {
 	p.State = StateProduct
 	msg.Text = "Введите название продукта"
 }
 
-func ProductList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
+func ProductList(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
 	products, err := bot.s.GetBuyListByUsername(ctx, update.Message.From.UserName)
 	if err != nil {
 		logger.Error("Get buy list error", zap.Error(err))
@@ -102,7 +133,7 @@ func HandleCallbacks(update *tgbotapi.Update, bot *Bot) {
 	}
 }
 
-func AddingToBuyList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
+func AddingToBuyList(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
 	switch p.State {
 	case StateProduct:
 		var err error
@@ -176,7 +207,7 @@ func FridgeList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update,
 	}
 }
 
-func AddFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
+func AddFridge(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
 	var err error
 	ur, err = bot.s.GetUserByUsername(ctx, update.Message.From.UserName)
 	if err != nil {
@@ -187,7 +218,7 @@ func AddFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
 	msg.Text = "Введите название продукта"
 }
 
-func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
+func AddingToFridge(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
 	switch f.State {
 	case StateFridgeProduct:
 		var err error
@@ -259,6 +290,11 @@ func AddingToFridge(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *B
 	}
 }
 
+func GetToDate(msg *tgbotapi.MessageConfig) {
+	msg.Text = "Введите начальную дату (YYYY-MM-DD)"
+	ps.State = StateFromDate
+}
+
 func UsedProductStat(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
 	switch ps.State {
 
@@ -301,7 +337,6 @@ func UsedProductStat(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *
 
 		}
 	}
-	SendMessage(bot, msg)
 }
 
 func DeleteProductFromBuyList(update *tgbotapi.Update, bot *Bot) {
@@ -450,7 +485,6 @@ func GetUsedProdcutsList(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.Messag
 		msg.Text = "Нет использованных продуктов"
 
 	}
-	SendMessage(bot, msg)
 }
 
 func GetFridgeListByUsernameAlphaMenu(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
@@ -472,6 +506,5 @@ func GetFridgeListByUsernameExpDateMenu(update *tgbotapi.Update, bot *Bot, msg *
 func SendMessage(bot *Bot, msg *tgbotapi.MessageConfig) {
 	if _, err := bot.BotAPI.Send(msg); err != nil {
 		panic(err)
-		//log.Fatal(err)
 	}
 }
