@@ -17,28 +17,28 @@ type Store struct {
 
 //TODO inteface
 
-func NewStore(connString string) *Store {
+func NewStore(connString string) (*Store, error) {
 	db, err := sqlx.Connect("postgres", connString)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
 		"file:./migrations/",
 		"postgres", driver)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	m.Up()
 
 	return &Store{
 		db: db,
-	}
+	}, nil
 }
 
 func (s *Store) AddUsertg(ctx context.Context, u *models.Usertg) error {
