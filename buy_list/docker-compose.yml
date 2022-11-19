@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  buy_list_bot:
+    container_name: golang_container
+    environment:
+     - TGTOKEN=${TGTOKEN}
+     - DBUSER=${DBUSER}
+     - DBPASSWORD=${DBPASSWORD}
+     - DBHOST=${DBHOST}
+     - DBNAME=${DBNAME}
+     - DBPORT=${DBPORT}
+    tty: true
+    build: .
+    ports:
+      - 8000:8080
+    restart: on-failure
+    volumes:
+      - .:/buy_list_bot
+    depends_on:
+      - db
+    networks:
+      - main
+
+  db:
+    image: postgres:latest
+    container_name: postgres_container
+    restart: always
+    environment:
+     - DBUSER=${DBUSER}
+     - DBPASSWORD=${DBPASSWORD}
+     - DBHOST=${DBHOST}
+     - DBNAME=${DBNAME}
+     - DBPORT=${DBPORT}
+    ports:
+      - 1234:5432
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    networks:
+      - main
+
+  pgadmin:
+      image: dpage/pgadmin4
+      container_name: pgadmin_container
+      environment:
+        PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+        PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      depends_on:
+        - db
+      ports:
+        - 9090:80
+      networks:
+        - main
+      restart: unless-stopped
+
+volumes:
+  pg_data:
+
+networks:
+  main:
+    driver: bridge

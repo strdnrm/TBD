@@ -8,6 +8,7 @@ import (
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
@@ -57,12 +58,19 @@ var (
 func newBot() Bot {
 	logger = zap.NewExample()
 
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
+	err := godotenv.Load(".env")
+	if err != nil {
+		logger.Error("Error with loading .env file", zap.Error(err))
+	}
+
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TGTOKEN"))
 	if err != nil {
 		logger.Panic("Invalid token", zap.Error(err))
 	}
 
-	store := store.NewStore(fmt.Sprintf("postgresql://%s:%s@localhost:5433/?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")))
+	store := store.NewStore(
+		fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", os.Getenv("DBUSER"), os.Getenv("DBPASSWORD"), os.Getenv("DBHOST"), os.Getenv("DBPORT"), os.Getenv("DBNAME")),
+	)
 
 	return Bot{
 		BotAPI: bot,

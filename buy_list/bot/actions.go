@@ -38,7 +38,7 @@ func HandleCommands(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConf
 	msg.ReplyToMessageID = update.Message.MessageID
 	switch update.Message.Command() {
 	case "start":
-		StartUser(msg, update, bot)
+		StartUser(update, bot, msg)
 	case "cancel":
 		GlobalState = StateStart
 	default:
@@ -71,7 +71,7 @@ func CancelMenu(msg *tgbotapi.MessageConfig) {
 	msg.ReplyMarkup = startKeyboard
 }
 
-func StartUser(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *Bot) {
+func StartUser(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
 	msg.ReplyMarkup = startKeyboard
 	msg.Text = "Привет! Я бот, который может управлять вашими покупками и мониторить срок годности продуктов."
 	err := bot.s.AddUsertg(ctx, &models.Usertg{
