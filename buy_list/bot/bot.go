@@ -68,9 +68,14 @@ func newBot() Bot {
 		logger.Panic("Invalid token", zap.Error(err))
 	}
 
-	store := store.NewStore(
-		fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", os.Getenv("DBUSER"), os.Getenv("DBPASSWORD"), os.Getenv("DBHOST"), os.Getenv("DBPORT"), os.Getenv("DBNAME")),
+	store, err := store.NewStore(
+		fmt.Sprintf("postgresql://%s:%s@localhost:5433/tgbot?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")),
+	// fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", os.Getenv("DBUSER"), os.Getenv("DBPASSWORD"), os.Getenv("DBHOST"), os.Getenv("DBPORT"), os.Getenv("DBNAME")),
 	)
+
+	if err != nil {
+		panic(err)
+	}
 
 	return Bot{
 		BotAPI: bot,
