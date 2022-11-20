@@ -33,7 +33,7 @@ services:
      - DATABASE_HOST=${DBHOST}
     #  - DATABASE_PORT=${DBPORT}
     ports:
-      - 1234:5432
+      - 5432:5432
     volumes:
       - ./pg_data:/var/lib/postgresql/data
     networks:
