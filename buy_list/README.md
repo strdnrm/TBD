@@ -43,23 +43,10 @@ services:
 ...
 ```
 
-3. Pull the container
+3. Run the container
 
 ```bash
-docker-compose pull
-```
-
-4. Run the container
-
-```bash
-docker-compose up -d
-```
-
-5. Check that the bot started correctly
-
-```bash
-docker-compose ps
-docker-compose logs
+docker-compose up 
 ```
 
 # Database schema:
