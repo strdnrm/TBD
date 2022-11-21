@@ -83,19 +83,22 @@ type TgBot struct {
 }
 
 const (
-	StateProduct int = iota
+	StateProductNull int = iota
+	StateProduct
 	StateWeight
 	StateBuyDate
 )
 
 const (
-	StateFridgeProduct int = iota
+	StateFridgeNull int = iota
+	StateFridgeProduct
 	StateFridgeDate
 	StateFromBuyList
 	StateOpen
 )
 
 const (
-	StateFromDate int = iota
+	StateDateNull int = iota
+	StateFromDate
 	StateToDate
 )

@@ -47,6 +47,55 @@ func HandleCommands(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConf
 	SendMessage(bot, msg)
 }
 
+func HandleStateBuylist(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
+	switch update.Message.Text {
+
+	case buylistKeyboard.Keyboard[0][0].Text: //add product
+		AddProduct(update, msg)
+
+	case buylistKeyboard.Keyboard[1][0].Text: //get buy list
+		ProductList(update, bot, msg)
+
+	case buylistKeyboard.Keyboard[1][1].Text: //cancel
+		CancelMenu(msg)
+
+	default:
+		if p.State != StateProductNull {
+			AddingToBuyList(update, bot, msg)
+		} else {
+			msg.Text = ""
+		}
+
+	}
+	SendMessage(bot, msg)
+}
+
+func HandleStateFridge(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
+	switch update.Message.Text {
+
+	case fridgeKeyboard.Keyboard[0][0].Text: //add product
+		AddFridge(update, bot, msg)
+
+	case fridgeKeyboard.Keyboard[1][0].Text: //get fridge list by alpha
+		GetFridgeListByUsernameAlphaMenu(update, bot, msg)
+
+	case fridgeKeyboard.Keyboard[2][0].Text: //get fridge list by exp date
+		GetFridgeListByUsernameExpDateMenu(update, bot, msg)
+
+	case fridgeKeyboard.Keyboard[3][0].Text: //cancel
+		CancelMenu(msg)
+
+	default:
+		if f.State != StateFridgeNull {
+			AddingToFridge(update, bot, msg)
+		} else {
+			msg.Text = ""
+		}
+
+	}
+	SendMessage(bot, msg)
+}
+
 func HandleStateUserProducts(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {
 	switch update.Message.Text {
 
@@ -60,7 +109,11 @@ func HandleStateUserProducts(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.Me
 		CancelMenu(msg)
 
 	default:
-		UsedProductStat(msg, update, bot)
+		if ps.State != StateDateNull {
+			UsedProductStat(msg, update, bot)
+		} else {
+			msg.Text = ""
+		}
 
 	}
 	SendMessage(bot, msg)
@@ -103,6 +156,7 @@ func ProductList(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig)
 			msg.ReplyMarkup = inlineBuylistKeyboard
 			SendMessage(bot, msg)
 		}
+		msg.Text = ""
 
 	} else {
 		msg.Text = "Список покупок пуст"
@@ -170,6 +224,7 @@ func AddingToBuyList(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageCon
 			}
 			msg.Text = "Товар добавлен в список покупок"
 			msg.ReplyMarkup = buylistKeyboard
+			p.State = StateProductNull
 			UpdateBuyListSchedule(bot)
 		}
 	}
@@ -201,6 +256,7 @@ func FridgeList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update,
 			msg.ReplyMarkup = inlineFridgeKeyboard
 			SendMessage(bot, msg)
 		}
+		msg.Text = ""
 	} else {
 		msg.Text = "Холодильник пуст"
 		SendMessage(bot, msg)
@@ -244,6 +300,7 @@ func AddingToFridge(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConf
 			}
 			msg.Text = "Товар добавлен в холодильник"
 			msg.ReplyMarkup = fridgeKeyboard
+			f.State = StateFridgeNull
 			UpdateExpireSchedule(bot)
 		}
 
@@ -330,7 +387,7 @@ func UsedProductStat(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *
 				if err != nil {
 					logger.Error("Get count used products in period list error", zap.Error(err))
 				}
-
+				ps.State = StateDateNull
 				msg.Text = fmt.Sprintf("Выкинуто продуктов: %d\nПриготовлено: %d", cc, ct)
 				msg.ReplyMarkup = usedProductsKeyboard
 			}
@@ -504,7 +561,9 @@ func GetFridgeListByUsernameExpDateMenu(update *tgbotapi.Update, bot *Bot, msg *
 }
 
 func SendMessage(bot *Bot, msg *tgbotapi.MessageConfig) {
-	if _, err := bot.BotAPI.Send(msg); err != nil {
-		panic(err)
+	if msg.Text != "" {
+		if _, err := bot.BotAPI.Send(msg); err != nil {
+			panic(err)
+		}
 	}
 }

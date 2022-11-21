@@ -69,8 +69,8 @@ func newBot() Bot {
 	}
 
 	store, err := store.NewStore(
-		// fmt.Sprintf("postgresql://%s:%s@localhost:5433/tgbot?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")),
-		fmt.Sprintf("postgresql://%s:%s@%s:%s/?sslmode=disable", os.Getenv("DBUSER"), os.Getenv("DBPASSWORD"), os.Getenv("DBHOST"), os.Getenv("DBPORT")), //, os.Getenv("DBNAME")
+		fmt.Sprintf("postgresql://%s:%s@localhost:5433/tgbot?sslmode=disable", os.Getenv("dbuser"), os.Getenv("password")),
+		// fmt.Sprintf("postgresql://%s:%s@%s:%s/?sslmode=disable", os.Getenv("DBUSER"), os.Getenv("DBPASSWORD"), os.Getenv("DBHOST"), os.Getenv("DBPORT")), //, os.Getenv("DBNAME")
 	)
 
 	if err != nil {
@@ -118,56 +118,20 @@ func StartBot() {
 			} else {
 
 				switch GlobalState {
-
 				//start menu
 				case StateStart:
 					StartMenu(&update, &bot, &msg)
 
 				//adding to buy list
 				case StateAddBuyList:
-					switch update.Message.Text {
+					HandleStateBuylist(&update, &bot, &msg)
 
-					case buylistKeyboard.Keyboard[0][0].Text: //add product
-						AddProduct(&update, &msg)
-
-					case buylistKeyboard.Keyboard[1][0].Text: //get buy list
-						ProductList(&update, &bot, &msg)
-						continue
-
-					case buylistKeyboard.Keyboard[1][1].Text: //cancel
-						CancelMenu(&msg)
-
-					default:
-						AddingToBuyList(&update, &bot, &msg)
-
-					}
-					SendMessage(&bot, &msg)
-
+				//adding to fridge
 				case StateAddFridge:
-					switch update.Message.Text {
+					HandleStateFridge(&update, &bot, &msg)
 
-					case fridgeKeyboard.Keyboard[0][0].Text: //add product
-						AddFridge(&update, &bot, &msg)
-
-					case fridgeKeyboard.Keyboard[1][0].Text: //get fridge list by alpha
-						GetFridgeListByUsernameAlphaMenu(&update, &bot, &msg)
-						continue
-
-					case fridgeKeyboard.Keyboard[2][0].Text: //get fridge list by exp date
-						GetFridgeListByUsernameExpDateMenu(&update, &bot, &msg)
-						continue
-
-					case fridgeKeyboard.Keyboard[3][0].Text: //cancel
-						CancelMenu(&msg)
-
-					default:
-						AddingToFridge(&update, &bot, &msg)
-
-					}
-					SendMessage(&bot, &msg)
-
+				//watch stats
 				case StateUsedProducts:
-
 					HandleStateUserProducts(&update, &bot, &msg)
 
 				}
