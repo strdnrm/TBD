@@ -160,7 +160,6 @@ func ProductList(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig)
 
 	} else {
 		msg.Text = "Список покупок пуст"
-		SendMessage(bot, msg)
 	}
 }
 
@@ -259,7 +258,6 @@ func FridgeList(msg *tgbotapi.MessageConfig, update *tgbotapi.Update,
 		msg.Text = ""
 	} else {
 		msg.Text = "Холодильник пуст"
-		SendMessage(bot, msg)
 	}
 }
 
