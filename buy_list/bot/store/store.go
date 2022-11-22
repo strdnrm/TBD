@@ -3,6 +3,7 @@ package store
 import (
 	"buy_list/bot/models"
 	"context"
+	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -306,8 +307,9 @@ func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context
 
 func (s *Store) GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context,
 	username string, period models.PeriodStat) (int, error) {
-	var cookedCount int
-	err := s.db.GetContext(ctx, &cookedCount, `
+	fmt.Println(username, period)
+	var thrownCount int
+	err := s.db.GetContext(ctx, &thrownCount, `
 	SELECT COUNT(*)
 	FROM fridge f
 	JOIN usertg ut ON ut.id = f.user_id
@@ -319,7 +321,7 @@ func (s *Store) GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context
 	if err != nil {
 		return -1, err
 	}
-	return cookedCount, nil
+	return thrownCount, nil
 }
 
 func (s *Store) GetTodayBuyList(ctx context.Context) ([]models.Product, error) {

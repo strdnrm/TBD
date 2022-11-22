@@ -387,7 +387,7 @@ func UsedProductStat(msg *tgbotapi.MessageConfig, update *tgbotapi.Update, bot *
 					logger.Error("Get count used products in period list error", zap.Error(err))
 				}
 
-				ct, err := bot.s.GetCountThrownUsedProductsInPeriodByUsername(ctx, update.Message.From.UserName, ps)
+				ct, err := bot.s.GetCountCookedUsedProductsInPeriodByUsername(ctx, update.Message.From.UserName, ps)
 				if err != nil {
 					logger.Error("Get count used products in period list error", zap.Error(err))
 				}
