@@ -150,7 +150,7 @@ func TestDeleteProdcutFromBuyListById(t *testing.T) {
 		db: d,
 	}
 
-	err := store.DeleteProductFromBuyListById(context.Background(), "b2a514a1-1755-4f9c-a3a3-132b5eb3a258")
+	err := store.DeleteProductFromBuyListById(context.Background(), "b2a514a1-1755-4f9c-a3a3-132b5eb3a258", "b2a514a1-1755-4f9c-a3a3-132b5eb3a258")
 
 	if err != nil && err != sql.ErrNoRows {
 		t.Error(err)
@@ -165,7 +165,7 @@ func TestDeleteProductFromFridgeById(t *testing.T) {
 		db: d,
 	}
 
-	err := store.DeleteProductFromFridgeById(context.Background(), "b2a514a1-1755-4f9c-a3a3-132b5eb3a258")
+	err := store.DeleteProductFromFridgeById(context.Background(), "b2a514a1-1755-4f9c-a3a3-132b5eb3a258", "b2a514a1-1755-4f9c-a3a3-132b5eb3a258")
 
 	if err != nil && err != sql.ErrNoRows {
 		t.Error(err)
@@ -180,7 +180,7 @@ func TestOpenProductFromFridgeById(t *testing.T) {
 		db: d,
 	}
 
-	err := store.DeleteProductFromFridgeById(context.Background(), "b2a514a1-1755-4f9c-a3a3-132b5eb3a258")
+	err := store.DeleteProductFromFridgeById(context.Background(), "b2a514a1-1755-4f9c-a3a3-132b5eb3a258", "b2a514a1-1755-4f9c-a3a3-132b5eb3a258")
 
 	if err != nil && err != sql.ErrNoRows {
 		t.Error(err)

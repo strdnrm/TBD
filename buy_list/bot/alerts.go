@@ -14,7 +14,11 @@ var schb *gocron.Scheduler //for buy_list alerts
 var schf *gocron.Scheduler // for fridge alerts
 
 func InitScheduler(bot *Bot) {
-	schb = gocron.NewScheduler(time.Local)
+	loc, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		panic(err)
+	}
+	schb = gocron.NewScheduler(loc) //time.Local
 	//for restarting bot
 	jbStart, err := schb.Every(1).Seconds().Do(CreateBuyAlerts, bot)
 	if err != nil {

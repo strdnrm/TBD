@@ -105,22 +105,23 @@ func (s *Store) GetProductByName(ctx context.Context, productName string) (model
 
 }
 
-func (s *Store) DeleteProductFromBuyListById(ctx context.Context, productId string) error {
+func (s *Store) DeleteProductFromBuyListById(ctx context.Context, productId string, userid string) error {
 	_, err := s.db.ExecContext(ctx, `
 	DELETE FROM buy_list
-	WHERE product_id = $1;
-	`, productId)
+	WHERE product_id = $1
+	AND user_id = $2;
+	`, productId, userid)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Store) DeleteProductFromFridgeById(ctx context.Context, productId string) error {
+func (s *Store) DeleteProductFromFridgeById(ctx context.Context, productId string, userid string) error {
 	_, err := s.db.ExecContext(ctx, `
 	DELETE FROM fridge
 	WHERE product_id = $1;
-	`, productId)
+	`, productId, userid)
 	if err != nil {
 		return err
 	}

@@ -119,7 +119,7 @@ func TestHandleCallbacks(t *testing.T) {
 			GetProductByNameFunc: func(ctx context.Context, productName string) (models.Product, error) {
 				return models.Product{}, nil
 			},
-			DeleteProductFromBuyListByIdFunc: func(ctx context.Context, productId string) error {
+			DeleteProductFromBuyListByIdFunc: func(ctx context.Context, productId string, userid string) error {
 				return nil
 			},
 			GetTodayBuyListFunc: func(ctx context.Context) ([]models.Product, error) {

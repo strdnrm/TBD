@@ -2,6 +2,7 @@ package bot
 
 import (
 	"buy_list/bot/models"
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -316,7 +317,12 @@ func AddingToFridge(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConf
 			if err != nil {
 				logger.Error("Getting product by name error", zap.Error(err))
 			}
-			err = bot.s.DeleteProductFromBuyListById(ctx, p.ProductId)
+			u, err := bot.s.GetUserByUsername(context.Background(), update.Message.From.UserName)
+			if err != nil {
+				logger.Error("Getting user error", zap.Error(err))
+			}
+
+			err = bot.s.DeleteProductFromBuyListById(ctx, p.ProductId, u.UserId)
 			if err != nil {
 				logger.Error("Deleting product from but list error", zap.Error(err))
 			}
@@ -401,7 +407,11 @@ func DeleteProductFromBuyList(update *tgbotapi.Update, bot *Bot) {
 	if err != nil {
 		logger.Error("Getting product error", zap.Error(err))
 	}
-	err = bot.s.DeleteProductFromBuyListById(ctx, p.ProductId)
+	u, err := bot.s.GetUserByUsername(context.Background(), update.CallbackQuery.From.UserName)
+	if err != nil {
+		logger.Error("Getting user error", zap.Error(err))
+	}
+	err = bot.s.DeleteProductFromBuyListById(ctx, p.ProductId, u.UserId)
 	if err != nil {
 		logger.Error("Deleting product from buy list error", zap.Error(err))
 	}
@@ -418,7 +428,11 @@ func DeleteProductFromFridge(update *tgbotapi.Update, bot *Bot) {
 	if err != nil {
 		logger.Error("Getting product error", zap.Error(err))
 	}
-	err = bot.s.DeleteProductFromFridgeById(ctx, p.ProductId)
+	u, err := bot.s.GetUserByUsername(context.Background(), update.CallbackQuery.From.UserName)
+	if err != nil {
+		logger.Error("Getting user error", zap.Error(err))
+	}
+	err = bot.s.DeleteProductFromFridgeById(ctx, p.ProductId, u.UserId)
 	if err != nil {
 		logger.Error("Deleting product error", zap.Error(err))
 	}

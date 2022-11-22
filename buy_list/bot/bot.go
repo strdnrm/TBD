@@ -10,6 +10,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 //go:generate moq -out store_moq_test.go . Storer
@@ -18,8 +19,8 @@ type Storer interface {
 	GetUserByUsername(ctx context.Context, username string) (models.Usertg, error)
 	CreateProductByName(ctx context.Context, productName string) (models.Product, error)
 	GetProductByName(ctx context.Context, productName string) (models.Product, error)
-	DeleteProductFromBuyListById(ctx context.Context, productId string) error
-	DeleteProductFromFridgeById(ctx context.Context, productId string) error
+	DeleteProductFromBuyListById(ctx context.Context, productId string, userid string) error
+	DeleteProductFromFridgeById(ctx context.Context, productId string, userid string) error
 	OpenProductFromFridgeById(ctx context.Context, productId string, expDate string) error
 	SetCookedProductFromFridgeById(ctx context.Context, productId string, useDate string) error
 	SetThrownProductFromFridgeById(ctx context.Context, productId string, useDate string) error
@@ -56,7 +57,7 @@ var (
 )
 
 func newBot() Bot {
-	logger = zap.NewExample()
+	logger = initializeLogger()
 
 	err := godotenv.Load(".env")
 	if err != nil {
@@ -148,4 +149,19 @@ func StartBot() {
 			}
 		}
 	}
+}
+
+func initializeLogger() *zap.Logger {
+	config := zap.NewProductionEncoderConfig()
+	config.EncodeTime = zapcore.ISO8601TimeEncoder
+	fileEncoder := zapcore.NewJSONEncoder(config)
+	consoleEncoder := zapcore.NewConsoleEncoder(config)
+	logFile, _ := os.OpenFile("text.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	writer := zapcore.AddSync(logFile)
+	defaultLogLevel := zapcore.DebugLevel
+	core := zapcore.NewTee(
+		zapcore.NewCore(fileEncoder, writer, defaultLogLevel),
+		zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), defaultLogLevel),
+	)
+	return zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
 }

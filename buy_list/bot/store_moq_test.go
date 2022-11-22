@@ -31,10 +31,10 @@ var _ Storer = &StorerMock{}
 //			CreateProductByNameFunc: func(ctx context.Context, productName string) (models.Product, error) {
 //				panic("mock out the CreateProductByName method")
 //			},
-//			DeleteProductFromBuyListByIdFunc: func(ctx context.Context, productId string) error {
+//			DeleteProductFromBuyListByIdFunc: func(ctx context.Context, productId string, userid string) error {
 //				panic("mock out the DeleteProductFromBuyListById method")
 //			},
-//			DeleteProductFromFridgeByIdFunc: func(ctx context.Context, productId string) error {
+//			DeleteProductFromFridgeByIdFunc: func(ctx context.Context, productId string, userid string) error {
 //				panic("mock out the DeleteProductFromFridgeById method")
 //			},
 //			GetBuyListByUsernameFunc: func(ctx context.Context, username string) ([]models.Product, error) {
@@ -105,10 +105,10 @@ type StorerMock struct {
 	CreateProductByNameFunc func(ctx context.Context, productName string) (models.Product, error)
 
 	// DeleteProductFromBuyListByIdFunc mocks the DeleteProductFromBuyListById method.
-	DeleteProductFromBuyListByIdFunc func(ctx context.Context, productId string) error
+	DeleteProductFromBuyListByIdFunc func(ctx context.Context, productId string, userid string) error
 
 	// DeleteProductFromFridgeByIdFunc mocks the DeleteProductFromFridgeById method.
-	DeleteProductFromFridgeByIdFunc func(ctx context.Context, productId string) error
+	DeleteProductFromFridgeByIdFunc func(ctx context.Context, productId string, userid string) error
 
 	// GetBuyListByUsernameFunc mocks the GetBuyListByUsername method.
 	GetBuyListByUsernameFunc func(ctx context.Context, username string) ([]models.Product, error)
@@ -194,6 +194,8 @@ type StorerMock struct {
 			Ctx context.Context
 			// ProductId is the productId argument value.
 			ProductId string
+			// Userid is the userid argument value.
+			Userid string
 		}
 		// DeleteProductFromFridgeById holds details about calls to the DeleteProductFromFridgeById method.
 		DeleteProductFromFridgeById []struct {
@@ -201,6 +203,8 @@ type StorerMock struct {
 			Ctx context.Context
 			// ProductId is the productId argument value.
 			ProductId string
+			// Userid is the userid argument value.
+			Userid string
 		}
 		// GetBuyListByUsername holds details about calls to the GetBuyListByUsername method.
 		GetBuyListByUsername []struct {
@@ -492,21 +496,23 @@ func (mock *StorerMock) CreateProductByNameCalls() []struct {
 }
 
 // DeleteProductFromBuyListById calls DeleteProductFromBuyListByIdFunc.
-func (mock *StorerMock) DeleteProductFromBuyListById(ctx context.Context, productId string) error {
+func (mock *StorerMock) DeleteProductFromBuyListById(ctx context.Context, productId string, userid string) error {
 	if mock.DeleteProductFromBuyListByIdFunc == nil {
 		panic("StorerMock.DeleteProductFromBuyListByIdFunc: method is nil but Storer.DeleteProductFromBuyListById was just called")
 	}
 	callInfo := struct {
 		Ctx       context.Context
 		ProductId string
+		Userid    string
 	}{
 		Ctx:       ctx,
 		ProductId: productId,
+		Userid:    userid,
 	}
 	mock.lockDeleteProductFromBuyListById.Lock()
 	mock.calls.DeleteProductFromBuyListById = append(mock.calls.DeleteProductFromBuyListById, callInfo)
 	mock.lockDeleteProductFromBuyListById.Unlock()
-	return mock.DeleteProductFromBuyListByIdFunc(ctx, productId)
+	return mock.DeleteProductFromBuyListByIdFunc(ctx, productId, userid)
 }
 
 // DeleteProductFromBuyListByIdCalls gets all the calls that were made to DeleteProductFromBuyListById.
@@ -516,10 +522,12 @@ func (mock *StorerMock) DeleteProductFromBuyListById(ctx context.Context, produc
 func (mock *StorerMock) DeleteProductFromBuyListByIdCalls() []struct {
 	Ctx       context.Context
 	ProductId string
+	Userid    string
 } {
 	var calls []struct {
 		Ctx       context.Context
 		ProductId string
+		Userid    string
 	}
 	mock.lockDeleteProductFromBuyListById.RLock()
 	calls = mock.calls.DeleteProductFromBuyListById
@@ -528,21 +536,23 @@ func (mock *StorerMock) DeleteProductFromBuyListByIdCalls() []struct {
 }
 
 // DeleteProductFromFridgeById calls DeleteProductFromFridgeByIdFunc.
-func (mock *StorerMock) DeleteProductFromFridgeById(ctx context.Context, productId string) error {
+func (mock *StorerMock) DeleteProductFromFridgeById(ctx context.Context, productId string, userid string) error {
 	if mock.DeleteProductFromFridgeByIdFunc == nil {
 		panic("StorerMock.DeleteProductFromFridgeByIdFunc: method is nil but Storer.DeleteProductFromFridgeById was just called")
 	}
 	callInfo := struct {
 		Ctx       context.Context
 		ProductId string
+		Userid    string
 	}{
 		Ctx:       ctx,
 		ProductId: productId,
+		Userid:    userid,
 	}
 	mock.lockDeleteProductFromFridgeById.Lock()
 	mock.calls.DeleteProductFromFridgeById = append(mock.calls.DeleteProductFromFridgeById, callInfo)
 	mock.lockDeleteProductFromFridgeById.Unlock()
-	return mock.DeleteProductFromFridgeByIdFunc(ctx, productId)
+	return mock.DeleteProductFromFridgeByIdFunc(ctx, productId, userid)
 }
 
 // DeleteProductFromFridgeByIdCalls gets all the calls that were made to DeleteProductFromFridgeById.
@@ -552,10 +562,12 @@ func (mock *StorerMock) DeleteProductFromFridgeById(ctx context.Context, product
 func (mock *StorerMock) DeleteProductFromFridgeByIdCalls() []struct {
 	Ctx       context.Context
 	ProductId string
+	Userid    string
 } {
 	var calls []struct {
 		Ctx       context.Context
 		ProductId string
+		Userid    string
 	}
 	mock.lockDeleteProductFromFridgeById.RLock()
 	calls = mock.calls.DeleteProductFromFridgeById
