@@ -40,8 +40,6 @@ func HandleCommands(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConf
 	switch update.Message.Command() {
 	case "start":
 		StartUser(update, bot, msg)
-	case "cancel":
-		GlobalState = StateStart
 	default:
 		msg.Text = "Неверная команда :("
 	}
@@ -123,6 +121,15 @@ func HandleStateUserProducts(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.Me
 func CancelMenu(msg *tgbotapi.MessageConfig) {
 	GlobalState = StateStart
 	msg.ReplyMarkup = startKeyboard
+	if p.State != StateProductNull {
+		p.State = StateProductNull
+	}
+	if f.State != StateFridgeNull {
+		f.State = StateFridgeNull
+	}
+	if ps.State != StateDateNull {
+		ps.State = StateDateNull
+	}
 }
 
 func StartUser(update *tgbotapi.Update, bot *Bot, msg *tgbotapi.MessageConfig) {

@@ -29,7 +29,7 @@ func InitScheduler(bot *Bot) {
 	schb.Every(1).Day().At("00:00").Do(CreateBuyAlerts, bot)
 	schb.StartAsync()
 
-	schf = gocron.NewScheduler(time.Local)
+	schf = gocron.NewScheduler(loc)
 	//for restarting bot
 	jfStart, err := schf.Every(1).Seconds().Do(CreateExpireAlerts, bot)
 	if err != nil {
