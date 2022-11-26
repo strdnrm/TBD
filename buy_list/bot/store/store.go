@@ -16,8 +16,6 @@ type Store struct {
 	db *sqlx.DB
 }
 
-//TODO inteface
-
 func NewStore(connString string) (*Store, error) {
 	db, err := sqlx.Connect("postgres", connString)
 	if err != nil {
@@ -267,8 +265,7 @@ func (s *Store) GetUsedProductsByUsername(ctx context.Context, username string) 
 	return products, nil
 }
 
-func (s *Store) GetUsedProductsInPeriodByUsername(ctx context.Context,
-	username string, period models.PeriodStat) ([]models.FridgeProduct, error) {
+func (s *Store) GetUsedProductsInPeriodByUsername(ctx context.Context, username string, period models.PeriodStat) ([]models.FridgeProduct, error) {
 	products := []models.FridgeProduct{}
 	err := s.db.SelectContext(ctx, &products, `
 	SELECT pd.name, f.status, f.use_date
@@ -287,8 +284,7 @@ func (s *Store) GetUsedProductsInPeriodByUsername(ctx context.Context,
 	return products, nil
 }
 
-func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context,
-	username string, period models.PeriodStat) (int, error) {
+func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context, username string, period models.PeriodStat) (int, error) {
 	var cookedCount int
 	err := s.db.GetContext(ctx, &cookedCount, `
 	SELECT COUNT(*)
@@ -305,8 +301,7 @@ func (s *Store) GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context
 	return cookedCount, nil
 }
 
-func (s *Store) GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context,
-	username string, period models.PeriodStat) (int, error) {
+func (s *Store) GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context, username string, period models.PeriodStat) (int, error) {
 	fmt.Println(username, period)
 	var thrownCount int
 	err := s.db.GetContext(ctx, &thrownCount, `

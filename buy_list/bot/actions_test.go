@@ -28,7 +28,7 @@ func TestStartMenuBuy(t *testing.T) {
 		s:      &StorerMock{},
 	}
 	msg := tgbotapi.NewMessage(ChatID, "test start menu")
-	StartMenu(&update, &bot, &msg)
+	bot.StartMenu(&update, &msg)
 	if GlobalState != StateAddBuyList {
 		t.Error("Buy list state disabled")
 	}
@@ -40,7 +40,7 @@ func TestStartMenuBuy(t *testing.T) {
 			Text: startKeyboard.Keyboard[1][0].Text,
 		},
 	}
-	StartMenu(&update, &bot, &msg)
+	bot.StartMenu(&update, &msg)
 	if GlobalState != StateAddFridge {
 		t.Error("Fridge state disabled")
 	}
@@ -52,16 +52,29 @@ func TestStartMenuBuy(t *testing.T) {
 			Text: startKeyboard.Keyboard[2][0].Text,
 		},
 	}
-	StartMenu(&update, &bot, &msg)
+	bot.StartMenu(&update, &msg)
 	if GlobalState != StateUsedProducts {
 		t.Error("State used products state disabled")
 	}
 }
 
 func TestCancelMenu(t *testing.T) {
+	b, err := tgbotapi.NewBotAPI(os.Getenv("tgtoken"))
+	if err != nil {
+		t.Error(err)
+	}
+	bot := Bot{
+		BotAPI: b,
+		s:      &StorerMock{},
+		p:      models.Product{},
+		f:      models.FridgeProduct{},
+		ur:     models.Usertg{},
+		ps:     models.PeriodStat{},
+	}
+
 	GlobalState = StateAddBuyList
 	msg := tgbotapi.NewMessage(ChatID, "test start menu")
-	CancelMenu(&msg)
+	bot.CancelMenu(&msg)
 	if GlobalState != StateStart {
 		t.Error("State start disabled")
 	}
@@ -93,7 +106,7 @@ func TestStartUser(t *testing.T) {
 	}
 
 	msg := tgbotapi.NewMessage(ChatID, "test start menu")
-	StartUser(&update, &bot, &msg)
+	bot.StartUser(context.Background(), &update, &msg)
 	// how
 }
 
@@ -146,6 +159,10 @@ func TestHandleCallbacks(t *testing.T) {
 				return 1019642784, nil
 			},
 		},
+		p:  models.Product{},
+		f:  models.FridgeProduct{},
+		ur: models.Usertg{},
+		ps: models.PeriodStat{},
 	}
 
 	// msg := tgbotapi.NewMessage(ChatID, "oaoaao")
@@ -176,7 +193,7 @@ func TestHandleCallbacks(t *testing.T) {
 	if _, err := bot.BotAPI.Send(msg); err != nil {
 		t.Error(err)
 	}
-	HandleCallbacks(&update, &bot)
+	bot.HandleCallbacks(context.Background(), &update)
 	// bot.BotAPI.MakeRequest(getUpdates)
 	// getting too old callback id
 

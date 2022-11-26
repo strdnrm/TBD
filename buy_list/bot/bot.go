@@ -31,12 +31,9 @@ type Storer interface {
 	GetFridgeListByUsernameAlpha(ctx context.Context, username string) ([]models.FridgeProduct, error)
 	GetFridgeListByUsernameExpDate(ctx context.Context, username string) ([]models.FridgeProduct, error)
 	GetUsedProductsByUsername(ctx context.Context, username string) ([]models.FridgeProduct, error)
-	GetUsedProductsInPeriodByUsername(ctx context.Context,
-		username string, period models.PeriodStat) ([]models.FridgeProduct, error)
-	GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context,
-		username string, period models.PeriodStat) (int, error)
-	GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context,
-		username string, period models.PeriodStat) (int, error)
+	GetUsedProductsInPeriodByUsername(ctx context.Context, username string, period models.PeriodStat) ([]models.FridgeProduct, error)
+	GetCountCookedUsedProductsInPeriodByUsername(ctx context.Context, username string, period models.PeriodStat) (int, error)
+	GetCountThrownUsedProductsInPeriodByUsername(ctx context.Context, username string, period models.PeriodStat) (int, error)
 	GetTodayBuyList(ctx context.Context) ([]models.Product, error)
 	GetChatIdByUserId(ctx context.Context, userid string) (int64, error)
 	GetSoonExpireList(ctx context.Context) ([]models.FridgeProduct, error)
@@ -44,19 +41,18 @@ type Storer interface {
 type Bot struct {
 	BotAPI *tgbotapi.BotAPI
 	s      Storer
+	p      models.Product
+	f      models.FridgeProduct
+	ur     models.Usertg
+	ps     models.PeriodStat
 }
 
 var (
-	p           models.Product
-	f           models.FridgeProduct
-	ur          models.Usertg
-	ps          models.PeriodStat
 	GlobalState int
 	logger      *zap.Logger
-	ctx         context.Context
 )
 
-func newBot() Bot {
+func newBot() *Bot {
 	logger = initializeLogger()
 
 	err := godotenv.Load(".env")
@@ -78,9 +74,13 @@ func newBot() Bot {
 		panic(err)
 	}
 
-	return Bot{
+	return &Bot{
 		BotAPI: bot,
 		s:      store,
+		p:      models.Product{},
+		f:      models.FridgeProduct{},
+		ur:     models.Usertg{},
+		ps:     models.PeriodStat{},
 	}
 }
 
@@ -88,7 +88,7 @@ func StartBot() {
 	logger = zap.NewExample()
 	defer logger.Sync()
 
-	ctx = context.Background()
+	ctx := context.Background()
 
 	bot := newBot()
 
@@ -103,37 +103,32 @@ func StartBot() {
 
 	GlobalState = StateStart
 
-	p = models.Product{}
-	f = models.FridgeProduct{}
-	ur = models.Usertg{}
-	ps = models.PeriodStat{}
-
-	InitScheduler(&bot)
+	InitScheduler(bot)
 
 	for update := range updates {
 
 		if update.Message != nil {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
 			if update.Message.IsCommand() {
-				HandleCommands(&update, &bot, &msg)
+				bot.HandleCommands(ctx, &update, &msg)
 			} else {
 
 				switch GlobalState {
 				//start menu
 				case StateStart:
-					StartMenu(&update, &bot, &msg)
+					bot.StartMenu(&update, &msg)
 
 				//adding to buy list
 				case StateAddBuyList:
-					HandleStateBuylist(&update, &bot, &msg)
+					bot.HandleStateBuylist(ctx, &update, &msg)
 
 				//adding to fridge
 				case StateAddFridge:
-					HandleStateFridge(&update, &bot, &msg)
+					bot.HandleStateFridge(ctx, &update, &msg)
 
 				//watch stats
 				case StateUsedProducts:
-					HandleStateUserProducts(&update, &bot, &msg)
+					bot.HandleStateUserProducts(ctx, &update, &msg)
 
 				}
 
@@ -142,7 +137,7 @@ func StartBot() {
 		} else if update.CallbackQuery != nil {
 			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 
-			HandleCallbacks(&update, &bot)
+			bot.HandleCallbacks(ctx, &update)
 
 			if _, err := bot.BotAPI.Request(callback); err != nil {
 				logger.Panic(err.Error())
