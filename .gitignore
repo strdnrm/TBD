@@ -3,3 +3,4 @@ token.json
 dbdata.json
 .env
 text.log
+apiserver.toml
