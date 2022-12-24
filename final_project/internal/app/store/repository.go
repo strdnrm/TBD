@@ -7,4 +7,5 @@ import (
 
 type UserRepository interface {
 	Create(context.Context, *model.User) error
+	FindByEmail(context.Context, string) (*model.User, error)
 }

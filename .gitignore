@@ -4,3 +4,4 @@ dbdata.json
 .env
 text.log
 apiserver.toml
+server_internal_test.go

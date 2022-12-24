@@ -6,10 +6,15 @@ import (
 	"testing"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 )
 
 func TestDB(t *testing.T, ctx context.Context, databaseURL string) (*sqlx.DB, func(...string)) {
 	t.Helper()
+	err := godotenv.Load("../../../../configs/.env")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	db, err := sqlx.Open("postgres", databaseURL)
 	if err != nil {

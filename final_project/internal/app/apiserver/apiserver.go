@@ -4,6 +4,7 @@ import (
 	"final_project/internal/app/store/sqlstore"
 	"net/http"
 
+	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,8 +14,10 @@ func Start(config *Config) error {
 		return err
 	}
 
+	sessionStore := sessions.NewCookieStore([]byte(config.SessionKey))
+
 	store := sqlstore.New(db)
-	srv := newServer(store)
+	srv := newServer(store, sessionStore)
 
 	return http.ListenAndServe(config.Addr, srv)
 }
