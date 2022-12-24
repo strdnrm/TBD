@@ -26,12 +26,6 @@ func (r *UserRepository) Create(ctx context.Context, u *model.User) error {
 	VALUES (:id, :login, :email, :password, :name, :surname, :is_admin)
 	RETURNING ID;
 	`, u)
-	// _, err := r.store.db.QueryContext(ctx, `
-	// INSERT INTO
-	// users(id, login, email, password, name, surname, is_admin)
-	// VALUES ($1, $2, $3, $4, $5, $6, $7)
-	// RETURNING ID;
-	// `, u.Id, u.Login, u.Email, u.EncryptedPassword, u.Name, u.Surname, u.Is_admin)
 	if err != nil {
 		return err
 	}
@@ -49,13 +43,24 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.
 	return &u, nil
 }
 
-// func (r *UserRepository) FindByLogin(ctx context.Context, login string) (*model.User, error) {
-// 	u := model.User{}
-// 	err := r.store.db.GetContext(ctx, &u, `
-// 	SELECT * FROM users WHERE login = $1;
-// 	`, login)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &u, nil
-// }
+func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
+	u := model.User{}
+	err := r.store.db.GetContext(ctx, &u, `
+	SELECT * FROM users WHERE id = $1;
+	`, id)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *UserRepository) FindByLogin(ctx context.Context, login string) (*model.User, error) {
+	u := model.User{}
+	err := r.store.db.GetContext(ctx, &u, `
+	SELECT * FROM users WHERE login = $1;
+	`, login)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
