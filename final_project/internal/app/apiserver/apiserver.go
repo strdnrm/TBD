@@ -4,6 +4,9 @@ import (
 	"final_project/internal/app/store/sqlstore"
 	"net/http"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
 )
@@ -28,11 +31,24 @@ func newDB(databaseURL string) (*sqlx.DB, error) {
 		return nil, err
 	}
 
-	// defer db.Close()
-
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}
+
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file:./migrations/",
+		"postgres", driver,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	m.Up()
 
 	return db, nil
 }
