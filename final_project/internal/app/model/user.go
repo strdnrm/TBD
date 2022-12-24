@@ -9,14 +9,14 @@ import (
 )
 
 type User struct {
-	Id                uuid.UUID `json:"-" db:"id"` //validate:"required, numeric"
+	Id                uuid.UUID `json:"-" db:"id" validate:"uuid"`
 	Login             string    `json:"login" db:"login" validate:"required"`
 	Email             string    `json:"email" db:"email" validate:"required,email"`
 	Password          string    `json:"password,omitempty" db:"-" validate:"required,gte=6,lte=40"`
-	EncryptedPassword string    `json:"-" db:"password"` //`db:"id" validate:"required"`
+	EncryptedPassword string    `json:"-" db:"password"`
 	Name              string    `json:"name" db:"name" validate:"required"`
 	Surname           string    `json:"surname" db:"surname" validate:"required"`
-	Is_admin          bool      `json:"-" db:"is_admin" ` //validate:"required"
+	Is_admin          bool      `json:"-" db:"is_admin" `
 }
 
 func (u *User) Validate() error {

@@ -8,8 +8,9 @@ import (
 )
 
 type Store struct {
-	db             *sqlx.DB
-	userRepository *UserRepository
+	db              *sqlx.DB
+	userRepository  *UserRepository
+	planeRepository *PlaneRepository
 }
 
 func New(db *sqlx.DB) *Store {
@@ -28,4 +29,16 @@ func (s *Store) User() store.UserRepository {
 	}
 
 	return s.userRepository
+}
+
+func (s *Store) Plane() store.PlaneRepository {
+	if s.planeRepository != nil {
+		return s.planeRepository
+	}
+
+	s.planeRepository = &PlaneRepository{
+		store: s,
+	}
+
+	return s.planeRepository
 }

@@ -12,3 +12,7 @@ type UserRepository interface {
 	FindByEmail(context.Context, string) (*model.User, error)
 	FindByID(context.Context, uuid.UUID) (*model.User, error)
 }
+
+type PlaneRepository interface {
+	Create(context.Context, *model.Plane) error
+}

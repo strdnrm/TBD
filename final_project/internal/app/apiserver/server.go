@@ -26,6 +26,7 @@ const (
 var (
 	errIncorrectEmailOrPassword = errors.New("incorrect email or password")
 	errNotAuthenticated         = errors.New("not authenticated")
+	errAccessDenied             = errors.New("access denied")
 )
 
 type ctxKey int8
@@ -70,6 +71,7 @@ func (s *server) configureRouter() {
 	private := s.router.PathPrefix("/private").Subrouter()
 	private.Use(s.authenticateUser)
 	private.HandleFunc("/whoami", s.hanldeWhoami()).Methods("GET")
+	private.HandleFunc("/plane", s.handleCreatePlane()).Methods("POST")
 }
 
 func (s *server) setRequsetID(next http.Handler) http.Handler {
@@ -190,6 +192,39 @@ func (s *server) hanldeSessionsCreate() http.HandlerFunc {
 		}
 
 		s.respond(w, r, http.StatusOK, nil)
+	}
+}
+
+func (s *server) handleCreatePlane() http.HandlerFunc {
+	type request struct {
+		NumbersOfSeats int    `json:"number_of_seats"`
+		Model          string `json:"model"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		u := r.Context().Value(ctxKeyUser).(*model.User)
+		if !u.Is_admin {
+			s.error(w, r, http.StatusUnauthorized, errAccessDenied)
+			return
+		}
+
+		p := &model.Plane{
+			NumberOfSeats: req.NumbersOfSeats,
+			Model:         req.Model,
+		}
+
+		if err := s.store.Plane().Create(context.Background(), p); err != nil {
+			s.error(w, r, http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, p)
 	}
 }
 
