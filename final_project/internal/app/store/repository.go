@@ -16,3 +16,7 @@ type UserRepository interface {
 type PlaneRepository interface {
 	Create(context.Context, *model.Plane) error
 }
+
+type RouteRepository interface {
+	Create(context.Context, *model.Route) error
+}

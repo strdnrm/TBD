@@ -72,6 +72,7 @@ func (s *server) configureRouter() {
 	private.Use(s.authenticateUser)
 	private.HandleFunc("/whoami", s.hanldeWhoami()).Methods("GET")
 	private.HandleFunc("/plane", s.handleCreatePlane()).Methods("POST")
+	private.HandleFunc("/route", s.handleCreateRoute()).Methods("POST")
 }
 
 func (s *server) setRequsetID(next http.Handler) http.Handler {
@@ -225,6 +226,39 @@ func (s *server) handleCreatePlane() http.HandlerFunc {
 		}
 
 		s.respond(w, r, http.StatusCreated, p)
+	}
+}
+
+func (s *server) handleCreateRoute() http.HandlerFunc {
+	type request struct {
+		Source       string `json:"source"`
+		Destionation string `json:"destintaion"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		u := r.Context().Value(ctxKeyUser).(*model.User)
+		if !u.Is_admin {
+			s.error(w, r, http.StatusUnauthorized, errAccessDenied)
+			return
+		}
+
+		rt := &model.Route{
+			Source:      req.Source,
+			Destination: req.Destionation,
+		}
+
+		if err := s.store.Route().Create(context.Background(), rt); err != nil {
+			s.error(w, r, http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, rt)
 	}
 }
 

@@ -11,6 +11,7 @@ type Store struct {
 	db              *sqlx.DB
 	userRepository  *UserRepository
 	planeRepository *PlaneRepository
+	routeRepository *RouteRepository
 }
 
 func New(db *sqlx.DB) *Store {
@@ -41,4 +42,16 @@ func (s *Store) Plane() store.PlaneRepository {
 	}
 
 	return s.planeRepository
+}
+
+func (s *Store) Route() store.RouteRepository {
+	if s.routeRepository != nil {
+		return s.routeRepository
+	}
+
+	s.routeRepository = &RouteRepository{
+		store: s,
+	}
+
+	return s.routeRepository
 }
