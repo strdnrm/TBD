@@ -8,10 +8,11 @@ import (
 )
 
 type Store struct {
-	db              *sqlx.DB
-	userRepository  *UserRepository
-	planeRepository *PlaneRepository
-	routeRepository *RouteRepository
+	db               *sqlx.DB
+	userRepository   *UserRepository
+	planeRepository  *PlaneRepository
+	routeRepository  *RouteRepository
+	flightRepository *FlightRepository
 }
 
 func New(db *sqlx.DB) *Store {
@@ -54,4 +55,16 @@ func (s *Store) Route() store.RouteRepository {
 	}
 
 	return s.routeRepository
+}
+
+func (s *Store) Flight() store.FlightRepository {
+	if s.flightRepository != nil {
+		return s.flightRepository
+	}
+
+	s.flightRepository = &FlightRepository{
+		store: s,
+	}
+
+	return s.flightRepository
 }

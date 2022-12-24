@@ -6,7 +6,7 @@ import (
 )
 
 type Route struct {
-	Id          uuid.UUID `json:"-" db:"id"`
+	Id          uuid.UUID `json:"id" db:"id"`
 	Source      string    `json:"source" db:"source" validate:"required"`
 	Destination string    `json:"destintaion" db:"destintaion" validate:"required"`
 }

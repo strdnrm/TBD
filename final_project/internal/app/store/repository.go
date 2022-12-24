@@ -20,3 +20,9 @@ type PlaneRepository interface {
 type RouteRepository interface {
 	Create(context.Context, *model.Route) error
 }
+
+type FlightRepository interface {
+	Create(context.Context, *model.Flight) error
+	GetByArrivalTime(context.Context, string, *model.Route) (*model.Flight, error)
+	GetByDepartureTime(context.Context, string, *model.Route) (*model.Flight, error)
+}

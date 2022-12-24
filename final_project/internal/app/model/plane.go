@@ -6,14 +6,14 @@ import (
 )
 
 type Plane struct {
-	Id            uuid.UUID `json:"-" db:"id"`
+	Id            uuid.UUID `json:"id" db:"id"`
 	NumberOfSeats int       `json:"number_of_seats" db:"number_of_seats" validate:"required,numeric"`
 	Model         string    `json:"model" db:"model" validate:"required"`
 }
 
-func (p *Plane) Validate() error {
+func (f *Flight) Validate() error {
 	validate := validator.New()
-	err := validate.Struct(p)
+	err := validate.Struct(f)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 type User struct {
-	Id                uuid.UUID `json:"-" db:"id" validate:"uuid"`
+	Id                uuid.UUID `json:"id" db:"id"`
 	Login             string    `json:"login" db:"login" validate:"required"`
 	Email             string    `json:"email" db:"email" validate:"required,email"`
 	Password          string    `json:"password,omitempty" db:"-" validate:"required,gte=6,lte=40"`

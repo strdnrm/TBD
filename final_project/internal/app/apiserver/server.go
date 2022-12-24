@@ -73,6 +73,9 @@ func (s *server) configureRouter() {
 	private.HandleFunc("/whoami", s.hanldeWhoami()).Methods("GET")
 	private.HandleFunc("/plane", s.handleCreatePlane()).Methods("POST")
 	private.HandleFunc("/route", s.handleCreateRoute()).Methods("POST")
+	private.HandleFunc("/flight", s.handleCreateFlight()).Methods("POST")
+	private.HandleFunc("/flight/arrival", s.handleArrivalFlight()).Methods("GET")
+	private.HandleFunc("/flight/departure", s.handleDepartureFlight()).Methods("GET")
 }
 
 func (s *server) setRequsetID(next http.Handler) http.Handler {
@@ -259,6 +262,113 @@ func (s *server) handleCreateRoute() http.HandlerFunc {
 		}
 
 		s.respond(w, r, http.StatusCreated, rt)
+	}
+}
+
+func (s *server) handleCreateFlight() http.HandlerFunc {
+	type request struct {
+		PlaneID        uuid.UUID `json:"plane_id"`
+		RouteID        uuid.UUID `json:"route_id"`
+		DepartureTime  string    `json:"departure_time"`
+		ArrivalTime    string    `json:"arrival_time"`
+		AvailableSeats int       `json:"available_seats"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		u := r.Context().Value(ctxKeyUser).(*model.User)
+		if !u.Is_admin {
+			s.error(w, r, http.StatusUnauthorized, errAccessDenied)
+			return
+		}
+
+		f := &model.Flight{
+			PlaneID:        req.PlaneID,
+			RouteID:        req.RouteID,
+			DepartureTime:  req.DepartureTime,
+			ArrivalTime:    req.ArrivalTime,
+			AvailableSeats: req.AvailableSeats,
+		}
+
+		if err := s.store.Flight().Create(context.Background(), f); err != nil {
+			s.error(w, r, http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, f)
+	}
+}
+
+func (s *server) handleArrivalFlight() http.HandlerFunc {
+	type request struct {
+		ArrivalTime  string `json:"arrival_time"`
+		Source       string `json:"source"`
+		Destionation string `json:"destintaion"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		rt := &model.Route{
+			Source:      req.Source,
+			Destination: req.Destionation,
+		}
+
+		f, err := s.store.Flight().GetByArrivalTime(context.Background(), req.ArrivalTime, rt)
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, errIncorrectEmailOrPassword)
+			return
+		}
+
+		if err := s.store.Flight().Create(context.Background(), f); err != nil {
+			s.error(w, r, http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, f)
+	}
+}
+
+func (s *server) handleDepartureFlight() http.HandlerFunc {
+	type request struct {
+		DepartureTime string `json:"departure_time"`
+		Source        string `json:"source"`
+		Destionation  string `json:"destintaion"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		rt := &model.Route{
+			Source:      req.Source,
+			Destination: req.Destionation,
+		}
+
+		f, err := s.store.Flight().GetByArrivalTime(context.Background(), req.DepartureTime, rt)
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, errIncorrectEmailOrPassword)
+			return
+		}
+
+		if err := s.store.Flight().Create(context.Background(), f); err != nil {
+			s.error(w, r, http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, f)
 	}
 }
 
