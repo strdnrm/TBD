@@ -5,4 +5,5 @@ type Store interface {
 	Plane() PlaneRepository
 	Route() RouteRepository
 	Flight() FlightRepository
+	Ticket() TicketRepository
 }

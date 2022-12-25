@@ -13,6 +13,7 @@ type Store struct {
 	planeRepository  *PlaneRepository
 	routeRepository  *RouteRepository
 	flightRepository *FlightRepository
+	ticketRepository *TicketRepository
 }
 
 func New(db *sqlx.DB) *Store {
@@ -67,4 +68,16 @@ func (s *Store) Flight() store.FlightRepository {
 	}
 
 	return s.flightRepository
+}
+
+func (s *Store) Ticket() store.TicketRepository {
+	if s.ticketRepository != nil {
+		return s.ticketRepository
+	}
+
+	s.ticketRepository = &TicketRepository{
+		store: s,
+	}
+
+	return s.ticketRepository
 }

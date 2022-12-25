@@ -76,6 +76,7 @@ func (s *server) configureRouter() {
 	private.HandleFunc("/flight", s.handleCreateFlight()).Methods("POST")
 	private.HandleFunc("/flight/arrival", s.handleArrivalFlight()).Methods("GET")
 	private.HandleFunc("/flight/departure", s.handleDepartureFlight()).Methods("GET")
+	private.HandleFunc("/flight/buyticket", s.handlePurchaseTicket()).Methods("POST")
 }
 
 func (s *server) setRequsetID(next http.Handler) http.Handler {
@@ -325,12 +326,7 @@ func (s *server) handleArrivalFlight() http.HandlerFunc {
 
 		f, err := s.store.Flight().GetByArrivalTime(context.Background(), req.ArrivalTime, rt)
 		if err != nil {
-			s.error(w, r, http.StatusUnauthorized, errIncorrectEmailOrPassword)
-			return
-		}
-
-		if err := s.store.Flight().Create(context.Background(), f); err != nil {
-			s.error(w, r, http.StatusUnprocessableEntity, err)
+			s.error(w, r, http.StatusUnauthorized, err)
 			return
 		}
 
@@ -359,16 +355,47 @@ func (s *server) handleDepartureFlight() http.HandlerFunc {
 
 		f, err := s.store.Flight().GetByArrivalTime(context.Background(), req.DepartureTime, rt)
 		if err != nil {
-			s.error(w, r, http.StatusUnauthorized, errIncorrectEmailOrPassword)
-			return
-		}
-
-		if err := s.store.Flight().Create(context.Background(), f); err != nil {
-			s.error(w, r, http.StatusUnprocessableEntity, err)
+			s.error(w, r, http.StatusUnauthorized, err)
 			return
 		}
 
 		s.respond(w, r, http.StatusCreated, f)
+	}
+}
+
+func (s *server) handlePurchaseTicket() http.HandlerFunc {
+	type request struct {
+		ID         uuid.UUID `json:"plane_id"`
+		UserID     uuid.UUID `json:"route_id"`
+		FlightID   uuid.UUID `json:"departure_time"`
+		Price      int       `json:"arrival_time"`
+		SeatID     uuid.UUID `json:"seat_id"`
+		SeatNumber string    `json:"seat_number"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		t := &model.Ticket{
+			Id:         req.ID,
+			UserID:     req.UserID,
+			FlightID:   req.FlightID,
+			Price:      req.Price,
+			SeatID:     req.SeatID,
+			SeatNumber: req.SeatNumber,
+		}
+
+		err := s.store.Ticket().Purchase(context.Background(), t)
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, t)
 	}
 }
 

@@ -26,3 +26,7 @@ type FlightRepository interface {
 	GetByArrivalTime(context.Context, string, *model.Route) (*model.Flight, error)
 	GetByDepartureTime(context.Context, string, *model.Route) (*model.Flight, error)
 }
+
+type TicketRepository interface {
+	Purchase(context.Context, *model.Ticket) error
+}
