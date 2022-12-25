@@ -77,6 +77,10 @@ func (s *server) configureRouter() {
 	private.HandleFunc("/flight/arrival", s.handleArrivalFlight()).Methods("GET")
 	private.HandleFunc("/flight/departure", s.handleDepartureFlight()).Methods("GET")
 	private.HandleFunc("/flight/buyticket", s.handlePurchaseTicket()).Methods("POST")
+	private.HandleFunc("/stat/departure/time", s.hanldeDepartureTime()).Methods("GET")
+	private.HandleFunc("/stat/arrival/time", s.hanldeArrivalTime()).Methods("GET")
+	private.HandleFunc("/stat/departure/point", s.hanldeDeparturePoint()).Methods("GET")
+	private.HandleFunc("/stat/arrival/point", s.hanldeArrivalPoint()).Methods("GET")
 }
 
 func (s *server) setRequsetID(next http.Handler) http.Handler {
@@ -396,6 +400,102 @@ func (s *server) handlePurchaseTicket() http.HandlerFunc {
 		}
 
 		s.respond(w, r, http.StatusCreated, t)
+	}
+}
+
+func (s *server) hanldeDepartureTime() http.HandlerFunc {
+	type request struct {
+		DepartureTime string `json:"departure_time"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		u := r.Context().Value(ctxKeyUser).(*model.User)
+
+		rows, err := s.store.User().GetFlightsByDepartureDate(context.Background(), req.DepartureTime, u)
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, rows)
+	}
+}
+
+func (s *server) hanldeArrivalTime() http.HandlerFunc {
+	type request struct {
+		ArrivalTime string `json:"arrival_time"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		u := r.Context().Value(ctxKeyUser).(*model.User)
+
+		rows, err := s.store.User().GetFlightsByArrivalDate(context.Background(), req.ArrivalTime, u)
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, rows)
+	}
+}
+
+func (s *server) hanldeDeparturePoint() http.HandlerFunc {
+	type request struct {
+		DeparturePoint string `json:"departure_point"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		u := r.Context().Value(ctxKeyUser).(*model.User)
+
+		rows, err := s.store.User().GetFlightsByDeparturePoint(context.Background(), req.DeparturePoint, u)
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, rows)
+	}
+}
+
+func (s *server) hanldeArrivalPoint() http.HandlerFunc {
+	type request struct {
+		ArrivalPoint string `json:"arrival_point"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		u := r.Context().Value(ctxKeyUser).(*model.User)
+
+		rows, err := s.store.User().GetFlightsByArrivalPoint(context.Background(), req.ArrivalPoint, u)
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, rows)
 	}
 }
 

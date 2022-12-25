@@ -64,3 +64,75 @@ func (r *UserRepository) FindByLogin(ctx context.Context, login string) (*model.
 	}
 	return &u, nil
 }
+
+func (r *UserRepository) GetFlightsByDeparturePoint(ctx context.Context, departutePoint string, u *model.User) (*[]model.Flight, error) {
+	f := []model.Flight{}
+	err := r.store.db.SelectContext(ctx, &f, `
+	SELECT * 
+	FROM user_tickets
+	LEFT JOIN ticket ON ticket.id = user_tickets.ticket_id
+	LEFT JOIN flight ON flight.id = ticket.flight_id
+	LEFT JOIN route ON route.id = flight.route_id
+	WHERE user_tickets.user_id = $1
+	AND route.destination = $2
+	ORDER BY flight.departure_time DESC;
+	`, u.Id, departutePoint)
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+func (r *UserRepository) GetFlightsByArrivalPoint(ctx context.Context, arrivalPoint string, u *model.User) (*[]model.Flight, error) {
+	f := []model.Flight{}
+	err := r.store.db.SelectContext(ctx, &f, `
+	SELECT * 
+	FROM user_tickets
+	LEFT JOIN ticket ON ticket.id = user_tickets.ticket_id
+	LEFT JOIN flight ON flight.id = ticket.flight_id
+	LEFT JOIN route ON route.id = flight.route_id
+	WHERE user_tickets.user_id = $1
+	AND route.destination = $2
+	ORDER BY flight.departure_time DESC;
+	`, u.Id, arrivalPoint)
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+func (r *UserRepository) GetFlightsByDepartureDate(ctx context.Context, departuteDate string, u *model.User) (*[]model.Flight, error) {
+	f := []model.Flight{}
+	err := r.store.db.SelectContext(ctx, &f, `
+	SELECT * 
+	FROM user_tickets
+	LEFT JOIN ticket ON ticket.id = user_tickets.ticket_id
+	LEFT JOIN flight ON flight.id = ticket.flight_id
+	LEFT JOIN route ON route.id = flight.route_id
+	WHERE user_tickets.user_id = $1
+	AND flight.departure_time::date = $2::date
+	ORDER BY flight.departure_time DESC;
+	`, u.Id, departuteDate)
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+func (r *UserRepository) GetFlightsByArrivalDate(ctx context.Context, arrivalDate string, u *model.User) (*[]model.Flight, error) {
+	f := []model.Flight{}
+	err := r.store.db.SelectContext(ctx, &f, `
+	SELECT * 
+	FROM user_tickets
+	LEFT JOIN ticket ON ticket.id = user_tickets.ticket_id
+	LEFT JOIN flight ON flight.id = ticket.flight_id
+	LEFT JOIN route ON route.id = flight.route_id
+	WHERE user_tickets.user_id = 1
+	AND flight.arrival_time::date = '2020.04.04'::date
+	ORDER BY flight.departure_time DESC;
+	`, u.Id, arrivalDate)
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}

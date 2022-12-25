@@ -11,6 +11,10 @@ type UserRepository interface {
 	Create(context.Context, *model.User) error
 	FindByEmail(context.Context, string) (*model.User, error)
 	FindByID(context.Context, uuid.UUID) (*model.User, error)
+	GetFlightsByDeparturePoint(context.Context, string, *model.User) (*[]model.Flight, error)
+	GetFlightsByArrivalPoint(context.Context, string, *model.User) (*[]model.Flight, error)
+	GetFlightsByDepartureDate(context.Context, string, *model.User) (*[]model.Flight, error)
+	GetFlightsByArrivalDate(context.Context, string, *model.User) (*[]model.Flight, error)
 }
 
 type PlaneRepository interface {
